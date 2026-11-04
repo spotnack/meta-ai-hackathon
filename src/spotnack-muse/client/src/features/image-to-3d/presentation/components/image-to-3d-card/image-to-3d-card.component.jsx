@@ -11,6 +11,7 @@ import { BlinkingAnimation } from "@shared/ui/animation/blinking/blinking-animat
 
 // Domain:
 import { CONVERSION_STATUS } from "@features/image-to-3d/domain/image-to-3d-conversion.entity";
+import { DEMO_PICKER_COPY } from "@features/image-to-3d/infrastructure/demo-goldens.config";
 
 // Custom Styles:
 import {
@@ -63,8 +64,10 @@ export const ImageTo3dCardComponent = ({
   isConverting,
   isCancelling = false,
   canConvert,
+  canPickDemoImage = false,
   previewHeight = PREVIEW_MAX_HEIGHT,
   onPickImage,
+  onPickDemoImage,
   onClearImage,
   onConvert,
   onCancelConversion,
@@ -75,6 +78,8 @@ export const ImageTo3dCardComponent = ({
   const percent = Math.round((progress?.fraction ?? 0) * 100);
   const isBusy = isPicking || isConverting;
   const hasImageSize = Boolean(selectedImage?.width && selectedImage?.height);
+  // Demo builds: Change cycles the TripoSG goldens.
+  const changeUsesDemo = canPickDemoImage && Boolean(onPickDemoImage);
 
   return (
     <Card>
@@ -95,10 +100,14 @@ export const ImageTo3dCardComponent = ({
                 <Ionicons name="close" size={18} color={ON_MEDIA_COLOR} />
               </ClearButton>
               <ChangePhotoButton
-                onPress={onPickImage}
+                onPress={changeUsesDemo ? onPickDemoImage : onPickImage}
                 hitSlop={8}
                 accessibilityRole="button"
-                accessibilityLabel="Choose a different photo"
+                accessibilityLabel={
+                  changeUsesDemo
+                    ? DEMO_PICKER_COPY.changeAccessibilityLabel
+                    : "Choose a different photo"
+                }
               >
                 <MaterialCommunityIcons
                   name="image-edit-outline"
@@ -163,6 +172,20 @@ export const ImageTo3dCardComponent = ({
             Pick a clear shot of a single object from your gallery.
           </CenteredText>
         </EmptyPicker>
+      )}
+
+      {!selectedImage && changeUsesDemo && (
+        <StatusRow>
+          <InlineButton
+            onPress={onPickDemoImage}
+            disabled={isPicking}
+            accessibilityRole="button"
+            accessibilityLabel={DEMO_PICKER_COPY.demoLink}
+          >
+            <MaterialCommunityIcons name="cube-outline" size={16} color={LINK_COLOR} />
+            <LinkText>{DEMO_PICKER_COPY.demoLink}</LinkText>
+          </InlineButton>
+        </StatusRow>
       )}
 
       {error && (

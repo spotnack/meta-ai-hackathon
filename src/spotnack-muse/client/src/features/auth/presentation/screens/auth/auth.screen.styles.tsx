@@ -49,6 +49,22 @@ export const SignInButtonText = styled(ThemedText)`
   font-weight: 600;
 `;
 
+export const DemoGuestButton = styled(TouchableOpacity)`
+  border-radius: 30px;
+  padding-vertical: 16px;
+  padding-horizontal: ${Spacing.four}px;
+  align-items: center;
+  justify-content: center;
+  background-color: #ffffff;
+`;
+
+export const DemoGuestButtonText = styled(ThemedText)`
+  color: #000000;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+`;
+
 export const SignUpGradient = styled(LinearGradient).attrs({
   colors: ["#00D4FF", "#9B30FF"] as string[],
   start: { x: 0, y: 0 },

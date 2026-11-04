@@ -38,6 +38,36 @@ export function patchPixelStorei({ gl }) {
 // How fast the model grows to its fitted size (exponential damping rate; ~0.5 s to settle).
 const SCALE_IN_DAMPING = 8;
 
+// Light-gray matte clay for untextured meshes (e.g. TripoSG output, which is geometry only).
+const UNTEXTURED_MESH_COLOR = "#d6d6d6";
+
+/**
+ * Makes untextured meshes renderable: they arrive without normals and with three.js's default glTF
+ * material (metalness 1), which renders black without an environment map. Gives them computed normals
+ * and a matte material. Textured or unlit models (the bundled food items) have normals and are untouched.
+ * @param {THREE.Object3D} root - Cloned glTF scene to prepare in place.
+ * @returns {THREE.Object3D} The same scene.
+ */
+export function prepareUntexturedMeshes(root) {
+  root.traverse((node) => {
+    if (!node.isMesh) return;
+    const { geometry } = node;
+    // Clones share geometry with useGLTF's cache, so remember which ones got computed normals:
+    // later clones then still get the matte material.
+    if (!geometry.userData.computedNormals) {
+      if (geometry.getAttribute("normal")) return;
+      geometry.computeVertexNormals();
+      geometry.userData.computedNormals = true;
+    }
+    node.material = new THREE.MeshStandardMaterial({
+      color: UNTEXTURED_MESH_COLOR,
+      roughness: 0.85,
+      metalness: 0,
+    });
+  });
+  return root;
+}
+
 /**
  * Loads a GLB model, auto-centers and fits it, then rotates it continuously.
  * @param {object} root0 - Component props.
@@ -47,7 +77,7 @@ const SCALE_IN_DAMPING = 8;
  */
 export function RotatingModel({ uri, scaleFactor = 1.0 }) {
   const { scene } = useGLTF(uri);
-  const clonedScene = useMemo(() => scene.clone(true), [scene]);
+  const clonedScene = useMemo(() => prepareUntexturedMeshes(scene.clone(true)), [scene]);
   const groupRef = useRef();
   const currentScale = useRef(0);
   const [fitScale, setFitScale] = useState(0);
@@ -183,6 +213,9 @@ export const GlbModelViewer = ({ uri, canvas, scaleFactor, background, showShado
             onCreated={patchPixelStorei}
           >
             <color attach="background" args={[backgroundColor]} />
+            {/* Unlit (textured) models ignore these; lit untextured meshes need them. */}
+            <ambientLight intensity={0.6} />
+            <directionalLight position={[3, 4, 5]} intensity={1.6} />
             {uri ? (
               <Suspense fallback={null}>
                 <RotatingModel uri={uri} scaleFactor={scaleFactor} />

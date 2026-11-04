@@ -1,0 +1,38 @@
+{
+  "size": 5,
+  "triposg_commit": "fc5c40990181e2a756c4e0b1c2f4d6b5202faf8c",
+  "pipeline": "official prepare_image(rmbg_net=None) + TripoSGPipeline",
+  "inputs": "rembg/u2net RGBA cut-outs, fed to the phone as-is",
+  "images": [
+    {
+      "id": "hjswed",
+      "source": "assets/example_data/hjswed.png",
+      "license": "TripoSG repo asset; check before shipping",
+      "seed": 42
+    },
+    {
+      "id": "iuvbww",
+      "source": "assets/example_data/iuvbww.png",
+      "license": "TripoSG repo asset; check before shipping",
+      "seed": 43
+    },
+    {
+      "id": "qwvfsd",
+      "source": "assets/example_data/qwvfsd.png",
+      "license": "TripoSG repo asset; check before shipping",
+      "seed": 44
+    },
+    {
+      "id": "uegvsd",
+      "source": "assets/example_data/uegvsd.png",
+      "license": "TripoSG repo asset; check before shipping",
+      "seed": 45
+    },
+    {
+      "id": "yuyyuw",
+      "source": "assets/example_data/yuyyuw.png",
+      "license": "TripoSG repo asset; check before shipping",
+      "seed": 46
+    }
+  ]
+}

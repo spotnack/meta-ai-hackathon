@@ -11,10 +11,18 @@ import {
 } from "../domain/image-to-3d-conversion.entity";
 import { imageLibraryAdapter } from "../infrastructure/image-library.adapter";
 import { placeholderImageTo3dAdapter } from "../infrastructure/placeholder-image-to-3d.adapter";
+import { demoGoldensImageSourceAdapter } from "../infrastructure/demo-goldens-image-source.adapter";
+import { demoGoldensImageTo3dAdapter } from "../infrastructure/demo-goldens-image-to-3d.adapter";
+import { isDemoImageTo3dMode } from "../infrastructure/demo-goldens.config";
 
-// Swap for the real pipeline adapter once it implements ImageTo3dPort (see image-to-3d.port.js).
-const imageTo3dPort = placeholderImageTo3dAdapter;
-const imageSourcePort = imageLibraryAdapter;
+// Demo mode (EXPO_PUBLIC_IMAGE_TO_3D_MODE=demo) adds the cloud-GPU goldens next to the gallery for the
+// hackathon demo. Gallery photos still go through the placeholder (no on-device inference yet); the real
+// pipeline adapter takes that slot once it implements ImageTo3dPort (see image-to-3d.port.js).
+const isDemoMode = isDemoImageTo3dMode();
+
+// Golden inputs carry demoGoldenId, so each image is converted by the adapter matching its source.
+const imageTo3dPortFor = (image) =>
+  image?.demoGoldenId ? demoGoldensImageTo3dAdapter : placeholderImageTo3dAdapter;
 
 const INITIAL_PROGRESS = { fraction: 0, label: "" };
 
@@ -22,7 +30,7 @@ const INITIAL_PROGRESS = { fraction: 0, label: "" };
  * Use case: pick an image, convert it to a 3D model, and save the result as a generated shape.
  * Saving goes through the shared GeneratedShapesContext, so Explore shows the new asset immediately.
  * A running conversion can be stopped with cancelConversion(); stopping never leaves an asset behind.
- * @returns {{ selectedImage: object|null, status: string, progress: {fraction: number, label: string}, error: {message: string, canOpenSettings: boolean}|null, isPicking: boolean, isConverting: boolean, isCancelling: boolean, canConvert: boolean, pickImage: function(): Promise<void>, clearImage: function(): void, convert: function(): Promise<void>, cancelConversion: function(): void }} Conversion state and actions.
+ * @returns {{ selectedImage: object|null, status: string, progress: {fraction: number, label: string}, error: {message: string, canOpenSettings: boolean}|null, isPicking: boolean, isConverting: boolean, isCancelling: boolean, canConvert: boolean, canPickDemoImage: boolean, pickImage: function(): Promise<void>, pickDemoImage: function(): Promise<void>, clearImage: function(): void, convert: function(): Promise<void>, cancelConversion: function(): void }} Conversion state and actions.
  */
 export const useImageTo3dConversion = () => {
   const { create, remove } = useGeneratedShapesContext();
@@ -44,7 +52,7 @@ export const useImageTo3dConversion = () => {
 
   const isConverting = status === CONVERSION_STATUS.CONVERTING;
 
-  const pickImage = useCallback(async () => {
+  const pickFrom = useCallback(async (imageSourcePort) => {
     if (isBusy.current) return;
     isBusy.current = true;
     setIsPicking(true);
@@ -71,6 +79,14 @@ export const useImageTo3dConversion = () => {
     }
   }, []);
 
+  const pickImage = useCallback(() => pickFrom(imageLibraryAdapter), [pickFrom]);
+
+  // Demo mode only: cycles to the next of the 5 cloud-GPU golden inputs.
+  const pickDemoImage = useCallback(
+    () => pickFrom(demoGoldensImageSourceAdapter),
+    [pickFrom],
+  );
+
   const clearImage = useCallback(() => {
     if (isBusy.current) return;
     setSelectedImage(null);
@@ -88,7 +104,7 @@ export const useImageTo3dConversion = () => {
     setProgress(INITIAL_PROGRESS);
     setError(null);
     try {
-      const { model, generator } = await imageTo3dPort.convertImageTo3d({
+      const { model, generator } = await imageTo3dPortFor(selectedImage).convertImageTo3d({
         image: selectedImage,
         signal: abortController.signal,
         onProgress: ({ fraction, label }) =>
@@ -143,7 +159,9 @@ export const useImageTo3dConversion = () => {
     isConverting,
     isCancelling,
     canConvert: Boolean(selectedImage) && !isConverting && !isPicking,
+    canPickDemoImage: isDemoMode,
     pickImage,
+    pickDemoImage,
     clearImage,
     convert,
     cancelConversion,

@@ -89,9 +89,26 @@ Endpoints:
 assets/                                            # Images used by the README.
 docs/
 ├── ai_pipeline.md                                 # The on-device AI pipeline for generating 3D models from 2D images.
+├── ai_pipeline_plan.md                            # Phased plan for the on-device AI pipeline (phases, files, decisions).
 ├── architecture.md                                # This file.
 ├── deployment.md                                  # Guide to deploy the app to production.
 └── index.html                                     # GitHub Pages landing page (Google Search Console verification).
+ml/
+└── triposg-mobile/                                # TripoSG conversion/parity/benchmark tooling (weights and large logs git-ignored).
+    ├── README.md                                  # Tooling overview and one-command runs.
+    ├── .gitignore                                 # Ignores weights, tensors, and large logs.
+    ├── audit/                                     # Phase 0 claim notes (claims.md).
+    ├── bench/spike.md                             # Spike-first plan: smallest on-device piece (tonight).
+    ├── bench/spike_dinov2_export.py             # Encoder→ONNX export + CPU baseline (needs env).
+    ├── bench/spike_adb_info.sh                  # Step 0: device specs (you run, paste back).
+    ├── bench/spike_adb_push.sh                  # Step 1: push spike files to the phone.
+    ├── bench/spike_adb_run.sh                   # Step 2: probe on-device runtimes.
+    ├── bench/spike_adb_pull.sh                  # Step 3: pull results + RAM evidence.
+    ├── bench/spike_adb_bench.sh                 # Step 4: run NDK bench on phone + VmHWM.
+    └── bench/ndk/                               # NDK benchmark sources (bench.cpp, CMake, build.sh).
+    ├── bench/spike_transformer_export.py        # FP16 one-step export (mmap, external data).
+    ├── eval/manifest_5.json                       # 5-image golden-set manifest (pre-cut inputs, fixed seeds).
+    └── reference/triposg_golden_5.ipynb           # Colab GPU notebook you run for the 5 goldens.
 src/
 └── spotnack-muse/                                 # Yarn workspace root.
     ├── .yarn/                                     # Yarn Berry releases and cache.
@@ -129,7 +146,8 @@ src/
     │   │   │   │   │   └── auth.context.tsx       # AuthContextProvider: in-memory session, PKCE federated sign-in,
     │   │   │   │   │                              # sign-out. Exposes useAuth() hook.
     │   │   │   │   ├── infrastructure/
-    │   │   │   │   │   └── auth.api.ts            # HTTP calls to /api/auth/*. ValidationError class.
+    │   │   │   │   │   ├── auth.api.ts            # HTTP calls to /api/auth/*. ValidationError class.
+    │   │   │   │   │   └── demo-auth.config.js    # Demo auth mode: EXPO_PUBLIC_AUTH_MODE flag + guest user.
     │   │   │   │   └── presentation/screens/
     │   │   │   │       ├── auth/
     │   │   │   │       │   ├── auth.screen.tsx    # Landing screen, Sign in / Sign up buttons.
@@ -215,7 +233,11 @@ src/
     │   │   │   │   │   └── image-to-3d.port.js                     # Ports for the conversion pipeline and the image source.
     │   │   │   │   ├── infrastructure/
     │   │   │   │   │   ├── image-library.adapter.js                # Image source backed by the device photo library (expo-image-picker).
-    │   │   │   │   │   └── placeholder-image-to-3d.adapter.js      # Simulated pipeline (no inference). Swap for the real AI adapter.
+    │   │   │   │   │   ├── placeholder-image-to-3d.adapter.js      # Simulated pipeline (no inference). Swap for the real AI adapter.
+    │   │   │   │   │   ├── demo-goldens.config.js                  # Demo mode: golden ids, URLs, bundled mesh modules, honest labels.
+    │   │   │   │   │   ├── demo-goldens-image-source.adapter.js    # Demo source: round-robin over the 5 golden inputs (HTTP).
+    │   │   │   │   │   ├── demo-goldens-image-to-3d.adapter.js     # Demo pipeline: copies the matching bundled display mesh.
+    │   │   │   │   │   └── demo-goldens/<id>/mesh.display.glb      # 5 bundled display meshes (~80k faces, ~1.6 MB each).
     │   │   │   │   └── presentation/components/
     │   │   │   │       └── image-to-3d-card/                       # Home card: photo picker, preview, progress and "Convert to 3D".
     │   │   │   ├── profile/
@@ -254,6 +276,7 @@ src/
     │   │   │           └── screen-container.tsx   # Full-screen safe-area wrapper with theme background.
     │   │   └── global.css                         # Global CSS (web target).
     │   ├── .gitignore                             # Git ignore for the client workspace.
+    │   ├── .env.example                           # Example EXPO_PUBLIC_* vars (image-to-3D demo mode).
     │   ├── AGENTS.md                              # Agent instructions for this workspace.
     │   ├── app.json                               # Expo app config: name, scheme, icons, splash, and plugins.
     │   ├── expo-env.d.ts                          # Expo TypeScript environment declarations.

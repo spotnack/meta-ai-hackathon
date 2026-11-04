@@ -2,6 +2,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
 import { AnimatedLogo } from "@/shared/ui/animation/animated-logo";
+import { useAuth } from "@/features/auth/application/auth.context";
+import { isDemoAuthMode } from "@/features/auth/infrastructure/demo-auth.config";
 
 import {
   Container,
@@ -10,6 +12,8 @@ import {
   ButtonGroup,
   SignInButton,
   SignInButtonText,
+  DemoGuestButton,
+  DemoGuestButtonText,
   SignUpButton,
   SignUpGradient,
   SignUpButtonText,
@@ -21,6 +25,12 @@ import {
  */
 export default function AuthScreen() {
   const router = useRouter();
+  const { signInAsDemoGuest } = useAuth();
+
+  const handleDemoGuest = async () => {
+    await signInAsDemoGuest();
+    router.replace("/(tabs)/");
+  };
 
   return (
     <Container>
@@ -45,6 +55,14 @@ export default function AuthScreen() {
                 <SignUpButtonText>Sign up</SignUpButtonText>
               </SignUpGradient>
             </SignUpButton>
+
+            {isDemoAuthMode() ? (
+              <DemoGuestButton activeOpacity={0.8} onPress={handleDemoGuest}>
+                <DemoGuestButtonText>
+                  Continue as demo guest (offline demo build)
+                </DemoGuestButtonText>
+              </DemoGuestButton>
+            ) : null}
           </ButtonGroup>
         </HeroSection>
       </SafeAreaView>

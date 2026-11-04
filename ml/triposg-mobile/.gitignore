@@ -1,0 +1,17 @@
+# Large local artifacts: never commit these.
+pretrained_weights/
+reference/tensors/
+reference/meshes/
+logs/
+*.safetensors
+*.bin
+*.onnx
+*.tflite
+*.ptl
+*.pte
+*.mlmodelc/
+__pycache__/
+# Colab golden output: keep only the report in git.
+reference/goldens_5/*
+!reference/goldens_5/report.json
+reference/goldens_5.zip

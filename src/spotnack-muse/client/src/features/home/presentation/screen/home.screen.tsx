@@ -64,8 +64,10 @@ export default function HomeScreen() {
               isConverting={vm.isConverting}
               isCancelling={vm.isCancelling}
               canConvert={vm.canConvert}
+              canPickDemoImage={vm.canPickDemoImage}
               previewHeight={previewHeight}
               onPickImage={vm.pickImage}
+              onPickDemoImage={vm.pickDemoImage}
               onClearImage={vm.clearImage}
               onConvert={vm.convert}
               onCancelConversion={vm.cancelConversion}

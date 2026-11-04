@@ -8,6 +8,7 @@ import {
   type AuthTokens,
   type AuthSession,
 } from "../infrastructure/auth.api";
+import { DEMO_GUEST_USER, isDemoAuthMode } from "../infrastructure/demo-auth.config";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -32,6 +33,7 @@ type AuthContextValue = AuthState & {
   resendCode: (email: string) => Promise<{ destination: string }>;
   signInWithGoogle: () => Promise<boolean>;
   signInWithApple: () => Promise<boolean>;
+  signInAsDemoGuest: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -183,9 +185,24 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
       return false;
     });
 
+  // Demo builds have no backend: create the local guest session with no
+  // network calls, so the tabs let it through.
+  const signInAsDemoGuest = () =>
+    withLoading(async () => {
+      if (!isDemoAuthMode()) {
+        throw new Error("Demo sign-in is not enabled in this build.");
+      }
+      setState({ user: { ...DEMO_GUEST_USER }, tokens: null, isLoading: false });
+    });
+
   const signOut = () =>
     withLoading(async () => {
       const provider = state.user?.provider;
+      // Demo guest has no server session: just clear the local state.
+      if (isDemoAuthMode() && provider === DEMO_GUEST_USER.provider) {
+        setState({ user: null, tokens: null, isLoading: false });
+        return;
+      }
       const result = await authApi.signOut(state.tokens?.refreshToken);
       setState({ user: null, tokens: null, isLoading: false });
       // Only open the hosted logout page for federated (Google/Apple) users so
@@ -205,6 +222,7 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
         resendCode,
         signInWithGoogle,
         signInWithApple,
+        signInAsDemoGuest,
         signOut,
       }}
     >

@@ -1,0 +1,85 @@
+# EAS upload ignore rules. EAS CLI uses this file INSTEAD OF all
+# .gitignore files in the repo, so it mirrors them (translated to
+# git-root-relative paths) and then re-includes the git-ignored demo
+# binaries the preview build needs. See
+# https://docs.expo.dev/build-reference/easignore/
+# .git and node_modules are always excluded by EAS CLI itself.
+
+# --- from ml/triposg-mobile/.gitignore (large local artifacts) ---
+ml/triposg-mobile/pretrained_weights/
+ml/triposg-mobile/reference/tensors/
+ml/triposg-mobile/reference/meshes/
+ml/triposg-mobile/logs/
+ml/triposg-mobile/**/*.safetensors
+ml/triposg-mobile/**/*.bin
+ml/triposg-mobile/**/*.onnx
+ml/triposg-mobile/**/*.tflite
+ml/triposg-mobile/**/*.ptl
+ml/triposg-mobile/**/*.pte
+ml/triposg-mobile/**/*.mlmodelc/
+ml/triposg-mobile/**/__pycache__/
+# Golden working set: never upload (the phone uses the bundled copies).
+ml/triposg-mobile/reference/goldens_5/
+ml/triposg-mobile/reference/goldens_5.zip
+
+# --- from src/spotnack-muse/.gitignore ---
+src/spotnack-muse/.vscode/
+src/spotnack-muse/.idea/
+src/spotnack-muse/**/__pycache__/
+src/spotnack-muse/**/*.py[cod]
+src/spotnack-muse/**/*$py.class
+src/spotnack-muse/**/pytest_report.xml
+src/spotnack-muse/**/node_modules/
+src/spotnack-muse/.yarn/*
+!src/spotnack-muse/.yarn/patches
+!src/spotnack-muse/.yarn/plugins
+!src/spotnack-muse/.yarn/releases
+!src/spotnack-muse/.yarn/sdks
+!src/spotnack-muse/.yarn/versions
+src/spotnack-muse/.pnp.*
+src/spotnack-muse/client/public/ai-models/
+
+# --- from src/spotnack-muse/client/.gitignore ---
+src/spotnack-muse/client/**/node_modules/
+src/spotnack-muse/client/.expo/
+src/spotnack-muse/client/dist/
+src/spotnack-muse/client/web-build/
+src/spotnack-muse/client/**/expo-env.d.ts
+src/spotnack-muse/client/**/.kotlin/
+src/spotnack-muse/client/**/*.orig.*
+src/spotnack-muse/client/**/*.jks
+src/spotnack-muse/client/**/*.p8
+src/spotnack-muse/client/**/*.p12
+src/spotnack-muse/client/**/*.key
+src/spotnack-muse/client/**/*.mobileprovision
+src/spotnack-muse/client/**/*.pem
+src/spotnack-muse/client/**/.metro-health-check*
+src/spotnack-muse/client/**/npm-debug.*
+src/spotnack-muse/client/**/yarn-debug.*
+src/spotnack-muse/client/**/yarn-error.*
+src/spotnack-muse/client/**/.DS_Store
+src/spotnack-muse/client/**/.env*.local
+src/spotnack-muse/client/**/*.tsbuildinfo
+src/spotnack-muse/client/**/example
+src/spotnack-muse/client/ios
+src/spotnack-muse/client/android
+# Demo-mode golden binaries (mirrors the client .gitignore addition).
+src/spotnack-muse/client/src/features/image-to-3d/infrastructure/demo-goldens/*/*.glb
+src/spotnack-muse/client/src/features/image-to-3d/infrastructure/demo-goldens/*/input_rgba.png
+
+# --- from src/spotnack-muse/server/.gitignore ---
+src/spotnack-muse/server/**/node_modules/
+src/spotnack-muse/server/**/*.log
+src/spotnack-muse/server/**/npm-debug.log*
+src/spotnack-muse/server/**/yarn-debug.log*
+src/spotnack-muse/server/**/yarn-error.log*
+src/spotnack-muse/server/**/.env
+src/spotnack-muse/server/**/.env.local
+src/spotnack-muse/server/**/.env.*.local
+src/spotnack-muse/server/**/__pycache__/
+src/spotnack-muse/server/**/*.py[cod]
+src/spotnack-muse/server/**/*$py.class
+
+# --- re-inclusions (must stay last): demo binaries for the EAS build ---
+!src/spotnack-muse/client/src/features/image-to-3d/infrastructure/demo-goldens/*/*.glb
+!src/spotnack-muse/client/src/features/image-to-3d/infrastructure/demo-goldens/*/input_rgba.png

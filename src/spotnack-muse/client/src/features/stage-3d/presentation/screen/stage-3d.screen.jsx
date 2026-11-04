@@ -75,6 +75,9 @@ export const Stage3dScreen = () => {
             <ThemedText type="subtitle" style={stageStyles.nameText}>
               {item.name}
             </ThemedText>
+            {item?.demoAttribution ? (
+              <ThemedText type="small">{item.demoAttribution}</ThemedText>
+            ) : null}
           </NameFooter>
         )}
       </SafeAreaView>

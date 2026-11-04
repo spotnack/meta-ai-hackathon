@@ -1,4 +1,8 @@
 import { isRenderableGeneratedShapeModel } from "../domain/generated-shapes.entity";
+import {
+  DEMO_ATTRIBUTION_LABEL,
+  isDemoGenerator,
+} from "@features/image-to-3d/infrastructure/demo-goldens.config";
 
 // Tags explore items that came from a generated shape, so features that store items
 // (e.g. favourites) can tell them apart from library items and render them accordingly.
@@ -24,6 +28,12 @@ export const generatedShapeToExploreItem = (generatedShape) => ({
   photos: generatedShape?.image ? [generatedShape.image] : [],
   bookmarkCount: 0,
   createdAt: generatedShape?.createdAt ?? null,
+  generator: generatedShape?.generator ?? null,
+  // Honest demo label: set only for cloud-GPU golden assets, never for
+  // on-device output. Explore and Stage render it when present.
+  demoAttribution: isDemoGenerator(generatedShape?.generator)
+    ? DEMO_ATTRIBUTION_LABEL
+    : null,
 });
 
 export const isGeneratedShapeItem = (item) =>

@@ -64,9 +64,24 @@
 
 <!-- Demo: -->
 <div align='center'>
-  <h2><a href="https://youtube.com/shorts/l_34ArLKoug"> Watch the Pre Demo Video </a></h2>
-  <h2><a href="https://expo.dev/accounts/camponogaralucas/projects/client/builds/e4430639-226a-41cd-aa83-c89dd6050923"> Try the Development Build on Your own Device </a></h2>
+  <h2><a href="https://youtube.com/shorts/RXwqbcoATZQ"> Watch the Demo Video </a></h2>
+  <h2><a href="https://expo.dev/accounts/camponogaralucas/projects/client/builds/464e3a39-ff48-4e2a-ab2d-d7be25ba3034"> Try the Preview Build on Your own Device </a></h2>
 </div>
+
+# Table of Contents
+
+- [About](#about)
+- [Motivation](#motivation)
+- [Updates](#updates)
+- [To Do](#todo)
+- [Architecture](#architecture)
+- [On-Device AI Inference Pipeline](#pipeline)
+- [Install Dependencies](#dependencies)
+- [Run the Mobile App](#run)
+- [Contribution Guidelines](#contribution)
+- [References](#references)
+
+---
 
 # About
 
@@ -74,18 +89,8 @@ This repository presents a mobile application with an on-device AI inference pip
 
 The solution for the AI pipeline was developed during the [Meta Global AI Developer Hackathon](https://cerebralvalley.ai/e/meta-ai-developer-hackathon) using [Muse AI](https://dev.meta.ai/docs/muse-code).
 
-- First commit (init): No AI agent was used.
-- Second commit: Uses Meta's Muse AI.
-
----
-
-# Motivation
-
-The open-source image-to-3D [TripoSG](https://github.com/VAST-AI-Research/TripoSG) model is a 1.5B parameter rectified flow transformer trained on 2 million curated 3D shapes from open-source datasets including ShapeNet and Objaverse, as described in the [TripoSG paper](https://arxiv.org/abs/2502.06608).
-
-During training, ground-truth 3D shape representations are encoded into 2048 latent tokens using a Variational Autoencoder (VAE). During inference, the trained model generates shape latents conditioned on an input image, and the VAE decoder reconstructs the 3D mesh from these latents. The paper also describes scaling the architecture to approximately 4B parameters using a Mixture-of-Experts (MoE) configuration and training at a latent resolution of 4096 tokens.
-
-However, the GitHub repository recommends a CUDA-enabled GPU with at least `8GB of VRAM` for inference. This adds a barrier for developers who would like to experiment with large AI models and cannot afford a GPU.
+- First commit (init): No AI inference (baseline application).
+- Second commit: Begins to use Meta's Muse AI.
 
 <p align="center">
   <img src="./assets/0.jpg" width="25%" />
@@ -109,8 +114,74 @@ However, the GitHub repository recommends a CUDA-enabled GPU with at least `8GB 
 
 <p align="center">
   <img src="./assets/8.jpg" width="25%" />
-  <img src="./assets/9.jpg" width="25%" />
 </p>
+
+---
+
+<!-- #region Motivation -->
+<details>
+  <summary><h1 id="motivation">Motivation</h1></summary>
+
+The open-source image-to-3D [TripoSG](https://github.com/VAST-AI-Research/TripoSG) model is a 1.5B parameter rectified flow transformer trained on 2 million curated 3D shapes from open-source datasets including ShapeNet and Objaverse, as described in the [TripoSG paper](https://arxiv.org/abs/2502.06608).
+
+During training, ground-truth 3D shape representations are encoded into 2048 latent tokens using a Variational Autoencoder (VAE). During inference, the trained model generates shape latents conditioned on an input image, and the VAE decoder reconstructs the 3D mesh from these latents. The paper also describes scaling the architecture to approximately 4B parameters using a Mixture-of-Experts (MoE) configuration and training at a latent resolution of 4096 tokens.
+
+However, the GitHub repository recommends a CUDA-enabled GPU with at least `8GB of VRAM` for inference. This adds a barrier for developers who would like to experiment with large AI models and cannot afford a GPU.
+
+</details>
+<!-- #endregion -->
+
+---
+
+<!-- #region Updates -->
+<details>
+  <summary><h1 id="updates">Updates</h1></summary>
+
+Status of the [AI Pipeline Plan](docs/ai_pipeline_plan.md). Full details, sources and logs are in [docs/ai_pipeline.md](docs/ai_pipeline.md).
+
+| Pipeline stage                                         | Status                                                 |
+| ------------------------------------------------------ | ------------------------------------------------------ |
+| Feasibility audit (Phase 0)                            | Done                                                   |
+| Golden reference set on a cloud GPU (Phase 1, reduced) | Done                                                   |
+| DINOv2 image encoder on the phone                      | Done: runs and matches the GPU output                  |
+| Rectified-flow transformer (1.5B) on the phone         | In progress: FP16 export needs a bigger machine        |
+| VAE decoder and mesh extraction on the phone           | Not started                                            |
+| In-app on-device inference                             | Not started: the app ships an honest demo mode instead |
+
+**Phase 0: feasibility audit.** Every claim about TripoSG was checked against its source code, configs and licenses. The model is a 1.5B-parameter rectified-flow transformer over 2048 latent tokens, conditioned on a DINOv2 image encoder (224×224 input, 257 tokens), followed by an SDF VAE and mesh extraction. In FP32 the transformer weights alone are 5.36 GiB, so a full-precision pipeline cannot fit on a phone: the target is FP16 or INT8 weights, loaded one stage at a time. The background-removal model used by TripoSG, RMBG-1.4, has a non-commercial license, so it is skipped and inputs must be pre-cut images.
+
+**Golden reference set.** [triposg_golden_5.ipynb](ml/triposg-mobile/reference/triposg_golden_5.ipynb) runs the official TripoSG pipeline at FP32 with 50 steps on a Colab T4 GPU, for 5 TripoSG example images cut out with rembg (u2net). It took 413–531 s and about 11 GiB of GPU memory per image. The notebook saves the DINOv2 input and output, the first transformer step's inputs and output, the final latents and the mesh for each image, so every on-device stage can be checked against the GPU result.
+
+**On-device DINOv2 encoder.** The encoder runs on a Xiaomi 15 Ultra (Snapdragon 8 Elite, 16 GB RAM, Android 16) as an FP32 ONNX model on the onnxruntime 1.22.0 CPU backend (4 threads), using a small NDK benchmark program run over adb:
+
+| Metric                            | Result                                       |
+| --------------------------------- | -------------------------------------------- |
+| Latency (5 runs after 2 warm-ups) | median 1084 ms, p90 1110 ms                  |
+| Peak memory                       | 2.47 GB                                      |
+| Match with the cloud GPU output   | cosine 1.0000001, max abs difference 6.0e-05 |
+| Thermal status                    | 0 before and after                           |
+
+**Transformer.** The FP16 single-step export (weights memory-mapped and cast one tensor at a time onto a meta-device model) passed its smoke test. The full export on a 15 GB laptop needed more than 9.8 GB of RAM and was stopped after 61 minutes before it could finish, so it moves to a cloud machine.
+
+**Demo build.** The Android preview build runs fully offline, with no backend:
+
+- **Login:** a "Continue as demo guest" button creates a local session, since the Express and Cognito backend is not deployed.
+- **Image to 3D:** "Choose a demo image" cycles through the 5 golden inputs, and Explore and Stage show the matching TripoSG meshes, simplified to about 80k faces. Every demo mesh is labeled "Generated by TripoSG on a cloud GPU (simplified for display). On-device generation in progress."
+- **Release-build fixes:** R8 minification is turned off, because it broke the reflection-based `expo-gl` view. Bundled images are copied out of the Android drawable resources before use.
+
+</details>
+<!-- #endregion -->
+
+---
+
+<!-- #region To Do -->
+<details>
+  <summary><h1 id="todo">To Do</h1></summary>
+
+Phase 1 to 9, following the [AI Pipeline Plan](docs/ai_pipeline_plan.md).
+
+</details>
+<!-- #endregion -->
 
 ---
 

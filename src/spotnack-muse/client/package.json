@@ -16,6 +16,8 @@
     "@react-three/fiber": "^9.8.2",
     "camelize": "^1.0.1",
     "expo": "~58.0.22",
+    "expo-asset": "~58.0.19",
+    "expo-build-properties": "~58.0.12",
     "expo-constants": "~58.0.14",
     "expo-crypto": "~58.0.7",
     "expo-dev-client": "~58.0.18",
