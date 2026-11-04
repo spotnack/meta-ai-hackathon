@@ -1,0 +1,152 @@
+{
+  "mockData": {
+    "foods": [
+      {
+        "id": "avocado_1",
+        "name": "Avocado",
+        "thumbnail": ["./mockS3Bucket/Avocado_Slice_Avocado_0.glb"],
+        "bookmarkCount": 0
+      },
+      {
+        "id": "bread_1",
+        "name": "Bread",
+        "thumbnail": ["./mockS3Bucket/Bread_Slice_Bread_0.glb"],
+        "bookmarkCount": 0
+      },
+      {
+        "id": "butter_1",
+        "name": "Butter",
+        "thumbnail": ["./mockS3Bucket/Melted_Butter_Butter_0.glb"],
+        "bookmarkCount": 0
+      },
+      {
+        "id": "cheese_1",
+        "name": "Cheese",
+        "thumbnail": ["./mockS3Bucket/Cheese_Slice_Cheese_0.glb"],
+        "bookmarkCount": 0
+      },
+      {
+        "id": "cucumber_1",
+        "name": "Cucumber",
+        "thumbnail": ["./mockS3Bucket/Cucumber_Slice_Cucumber_0.glb"],
+        "bookmarkCount": 0
+      },
+      {
+        "id": "egg_1",
+        "name": "Egg",
+        "thumbnail": ["./mockS3Bucket/Egg_Slice_Egg_0.glb"],
+        "bookmarkCount": 0
+      },
+      {
+        "id": "fries_1",
+        "name": "Fries",
+        "thumbnail": ["./mockS3Bucket/Fries_Slice_Fries_0.glb"],
+        "bookmarkCount": 0
+      },
+      {
+        "id": "halloumi_1",
+        "name": "Halloumi",
+        "thumbnail": ["./mockS3Bucket/Halloumi_Slice_Halloumi_0.glb"],
+        "bookmarkCount": 0
+      },
+      {
+        "id": "ketchup_1",
+        "name": "Ketchup",
+        "thumbnail": ["./mockS3Bucket/Ketchup_Slice_Ketchup_0.glb"],
+        "bookmarkCount": 0
+      },
+      {
+        "id": "kiwi_1",
+        "name": "Kiwi",
+        "thumbnail": ["./mockS3Bucket/Qiiwi_Slice_Qiiwi_0.glb"],
+        "bookmarkCount": 0
+      },
+      {
+        "id": "lettuce_1",
+        "name": "Lettuce",
+        "thumbnail": ["./mockS3Bucket/Lettuce_Slice_Lettuce_0.glb"],
+        "bookmarkCount": 0
+      },
+      {
+        "id": "mayo_1",
+        "name": "Mayo",
+        "thumbnail": ["./mockS3Bucket/Mayo_Slice_Mayo_0.glb"],
+        "bookmarkCount": 0
+      },
+      {
+        "id": "mushroom_1",
+        "name": "Mushroom",
+        "thumbnail": ["./mockS3Bucket/Mushroom_Slice_Mushroom_0.glb"],
+        "bookmarkCount": 0
+      },
+      {
+        "id": "mustard_1",
+        "name": "Mustard",
+        "thumbnail": ["./mockS3Bucket/Mustard_Slice_Mustrard_0.glb"],
+        "bookmarkCount": 0
+      },
+      {
+        "id": "olive_1",
+        "name": "Olive",
+        "thumbnail": ["./mockS3Bucket/Olive_Slice_Oilives_0.glb"],
+        "bookmarkCount": 0
+      },
+      {
+        "id": "onion_1",
+        "name": "Onion",
+        "thumbnail": ["./mockS3Bucket/Onion_Slice_Onion_0.glb"],
+        "bookmarkCount": 0
+      },
+      {
+        "id": "pepper_1",
+        "name": "Pepper",
+        "thumbnail": ["./mockS3Bucket/Pepper_Slice_Pepper_0.glb"],
+        "bookmarkCount": 0
+      },
+      {
+        "id": "pickle_1",
+        "name": "Pickle",
+        "thumbnail": ["./mockS3Bucket/Pickle_Slice_Pickles_0.glb"],
+        "bookmarkCount": 0
+      },
+      {
+        "id": "pineapple_1",
+        "name": "Pineapple",
+        "thumbnail": ["./mockS3Bucket/Pineapple_Slice_Pineapple_0.glb"],
+        "bookmarkCount": 0
+      },
+      {
+        "id": "tomato_1",
+        "name": "Tomato",
+        "thumbnail": ["./mockS3Bucket/Tomato_Slice_Tomato_0.glb"],
+        "bookmarkCount": 0
+      },
+      {
+        "id": "waffle_1",
+        "name": "Waffle",
+        "thumbnail": ["./mockS3Bucket/Waffle_Slice_Waffle_0.glb"],
+        "bookmarkCount": 0
+      }
+    ],
+    "beverages": [
+      {
+        "id": "tea_1",
+        "name": "Ulong Tea",
+        "thumbnail": [],
+        "bookmarkCount": 0
+      },
+      {
+        "id": "tea_2",
+        "name": "Black Tea",
+        "thumbnail": [],
+        "bookmarkCount": 0
+      },
+      {
+        "id": "tea_3",
+        "name": "Green Tea",
+        "thumbnail": [],
+        "bookmarkCount": 0
+      }
+    ]
+  }
+}
