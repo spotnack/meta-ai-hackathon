@@ -16,5 +16,32 @@ dependencies:
       - torchvision==0.20.1
       - torchsummary
       - --extra-index-url=https://download.pytorch.org/whl/cu121
+      # On-device TripoSG pipeline (ml/triposg-mobile/): ONNX export,
+      # FP16 conversion, parity checks and mesh tools. Versions match the
+      # env the exports were validated with (torch 2.5.1 runs CPU-only too).
+      - diffusers==0.30.3
+      - transformers==4.57.6
+      - huggingface_hub==0.36.2
+      - safetensors==0.8.0
+      - einops==0.8.2
+      - numpy==2.2.6
+      - scipy==1.15.3
+      - matplotlib==3.10.1
+      - onnx==1.23.2
+      - onnxruntime==1.22.0
+      - protobuf==6.31.1
+      - trimesh==5.2.0
+      - pymeshlab==2025.7.post1
+      - pillow==12.3.0
+      - tqdm==4.70.1
+      - qai-hub==0.57.0
+      - onnxsim==0.7.3
 
 # conda env update -n spotnack-muse --file environment.yml --prune && conda activate spotnack-muse
+#
+# The TripoSG model code is not on PyPI. Clone it at the pinned commit to the
+# path the pipeline scripts import from:
+#   git clone https://github.com/VAST-AI-Research/TripoSG.git ~/.cache/triposg/TripoSG
+#   git -C ~/.cache/triposg/TripoSG checkout fc5c40990181e2a756c4e0b1c2f4d6b5202faf8c
+# The golden-reference notebook (ml/triposg-mobile/reference/) runs on a Colab
+# GPU runtime and installs its own packages in its first cell.

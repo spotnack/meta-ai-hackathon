@@ -126,7 +126,7 @@ The open-source image-to-3D [TripoSG](https://github.com/VAST-AI-Research/TripoS
 
 During training, ground-truth 3D shape representations are encoded into 2048 latent tokens using a Variational Autoencoder (VAE). During inference, the trained model generates shape latents conditioned on an input image, and the VAE decoder reconstructs the 3D mesh from these latents. The paper also describes scaling the architecture to approximately 4B parameters using a Mixture-of-Experts (MoE) configuration and training at a latent resolution of 4096 tokens.
 
-However, the GitHub repository recommends a CUDA-enabled GPU with at least `8GB of VRAM` for inference. This adds a barrier for developers who would like to experiment with large AI models and cannot afford a GPU.
+However, the GitHub repository recommends a CUDA-enabled GPU with at least `8GB of VRAM` for inference. This adds a barrier for users who would like to experiment with large AI models and cannot afford a GPU.
 
 </details>
 <!-- #endregion -->
@@ -142,15 +142,31 @@ Status of the [AI Pipeline Plan](docs/ai_pipeline_plan.md). Full details, source
 | Pipeline stage                                         | Status                                                 |
 | ------------------------------------------------------ | ------------------------------------------------------ |
 | Feasibility audit (Phase 0)                            | Done                                                   |
-| Golden reference set on a cloud GPU (Phase 1, reduced) | Done                                                   |
+| Golden reference set and parity harness (Phase 1)      | Done: 5 images, thresholds fixed, all baselines pass   |
 | DINOv2 image encoder on the phone                      | Done: runs and matches the GPU output                  |
-| Rectified-flow transformer (1.5B) on the phone         | In progress: FP16 export needs a bigger machine        |
+| Rectified-flow transformer (1.5B) on the phone         | In progress (Phase 2): runs on the NPU, 3.5 s per step |
 | VAE decoder and mesh extraction on the phone           | Not started                                            |
 | In-app on-device inference                             | Not started: the app ships an honest demo mode instead |
 
 **Phase 0: feasibility audit.** Every claim about TripoSG was checked against its source code, configs and licenses. The model is a 1.5B-parameter rectified-flow transformer over 2048 latent tokens, conditioned on a DINOv2 image encoder (224×224 input, 257 tokens), followed by an SDF VAE and mesh extraction. In FP32 the transformer weights alone are 5.36 GiB, so a full-precision pipeline cannot fit on a phone: the target is FP16 or INT8 weights, loaded one stage at a time. The background-removal model used by TripoSG, RMBG-1.4, has a non-commercial license, so it is skipped and inputs must be pre-cut images.
 
 **Golden reference set.** [triposg_golden_5.ipynb](ml/triposg-mobile/reference/triposg_golden_5.ipynb) runs the official TripoSG pipeline at FP32 with 50 steps on a Colab T4 GPU, for 5 TripoSG example images cut out with rembg (u2net). It took 413–531 s and about 11 GiB of GPU memory per image. The notebook saves the DINOv2 input and output, the first transformer step's inputs and output, the final latents and the mesh for each image, so every on-device stage can be checked against the GPU result.
+
+**Parity harness (Phase 1).** One command, `python -u ml/triposg-mobile/parity/run_phase1.py`, checks the SHA-256 of every golden file and grades any candidate output against the goldens:
+
+- **Tensors**, for each pipeline stage: max and mean absolute error, relative L2 and cosine similarity.
+- **Meshes:** Chamfer distance, F-score at 1% of the bounding-box diagonal, and volume IoU on a 64³ grid.
+
+The acceptance thresholds were fixed before any optimization and are justified in [THRESHOLDS.md](ml/triposg-mobile/parity/THRESHOLDS.md):
+
+| Stage | Pass if |
+| --- | --- |
+| One transformer step | cosine ≥ 0.999 and relative L2 ≤ 1e-2 |
+| Mesh | Chamfer/diagonal ≤ 0.01, F-score ≥ 0.9 and IoU ≥ 0.95 |
+
+They were calibrated on two noise baselines for each of the 5 images, the decimated display mesh against the full mesh, and the same mesh sampled with two seeds. Every baseline passes: Chamfer/diagonal 3.5–4.6e-3, F-score 0.97–1.00, IoU ≥ 0.998.
+
+The eval set stays at 5 images. Its size only bounds how confident the parity check is, not on-device speed or quality.
 
 **On-device DINOv2 encoder.** The encoder runs on a Xiaomi 15 Ultra (Snapdragon 8 Elite, 16 GB RAM, Android 16) as an FP32 ONNX model on the onnxruntime 1.22.0 CPU backend (4 threads), using a small NDK benchmark program run over adb:
 
@@ -178,7 +194,11 @@ Status of the [AI Pipeline Plan](docs/ai_pipeline_plan.md). Full details, source
 <details>
   <summary><h1 id="todo">To Do</h1></summary>
 
-Phase 1 to 9, following the [AI Pipeline Plan](docs/ai_pipeline_plan.md).
+Remaining phases of the [AI Pipeline Plan](docs/ai_pipeline_plan.md) (Phases 0 and 1 are done):
+
+- **Phase 2, runtime evaluation:** finish the transformer on the phone NPU (one step already runs in 3.5 s and matches the GPU), port the VAE decoder and mesh extraction, and pick the number of steps, precision and guidance.
+- **Phase 3, native implementation:** port the VAE decoder and mesh extraction, add on-device preprocessing, and build the native module and the real image-to-3D adapter.
+- **Phase 4, integration and polish:** model download with checksums, licenses, cleanup of the demo build settings, and end-to-end testing in airplane mode.
 
 </details>
 <!-- #endregion -->
@@ -189,7 +209,7 @@ Phase 1 to 9, following the [AI Pipeline Plan](docs/ai_pipeline_plan.md).
 <details>
   <summary><h1 id="architecture">Architecture</h1></summary>
 
-This current application is a small portion of the Spotnack mobile app that focuses only on the AI inference. The project is a Yarn 4 (Berry) monorepo located at `src/spotnack-muse/`, with two workspaces:
+This project focuses only on the AI inference feature of the Spotnack mobile application. The project is a Yarn 4 (Berry) monorepo located at `src/spotnack-muse/`, with two workspaces:
 
 - `client/`: React Native app built with Expo.
 - `server/`: Express.js REST API written as ES modules.
@@ -210,18 +230,18 @@ The Frontend and Backend architectures, including the project's file source tree
 <details>
   <summary><h1 id="pipeline">On-Device AI Inference Pipeline</h1></summary>
 
-The on-device AI inference pipeline is described in more detail at [docs/pipeline.md](docs/ai_pipeline.md).
+The on-device AI inference pipeline is described in more detail at [docs/ai_pipeline.md](docs/ai_pipeline.md).
 
 The original TripoSG AI model architecture:
 
 <p align="center">
-  <img src="./assets/triposg.png" width="25%" />
+  <img src="./assets/triposg.png" width="100%" />
 </p>
 
 The proposed on-device AI inference pipeline:
 
 <p align="center">
-  <img src="./assets/ai_pipeline.png" width="25%" />
+  <img src="./assets/ai_pipeline.png" width="50%" />
 </p>
 
 </details>
@@ -239,7 +259,7 @@ The proposed on-device AI inference pipeline:
 cd src/spotnack-muse/ && yarn
 ```
 
-2. Install linting dependencies:
+2. Install Python dependencies:
 
 ```bash
 conda env create -f environment.yml && conda activate spotnack-muse

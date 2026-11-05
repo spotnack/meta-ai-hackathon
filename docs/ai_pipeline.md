@@ -6,6 +6,7 @@
 
 - [On-Device AI Inference Pipeline](#on-device-ai-inference-pipeline)
 - [Phase 0 Audit (checkpoint)](#phase-0-audit-checkpoint)
+- [Phase 1: Reference and Parity Method](#phase-1-reference-and-parity-method)
 
 ---
 
@@ -31,7 +32,7 @@ Label key: *documented* = an inspected source states it (linked); *unverified*
 
 | # | Prompt claim | Verdict + source (inspected this turn) | Label |
 | --- | --- | --- | --- |
-| 1 | Rectified-flow transformer, ~1.5B params | Confirmed. README Updates: "Release of TripoSG 1.5B parameter rectified flow model and VAE trained on 2048 latent tokens" | *documented* ([README](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/README.md)) |
+| 1 | Rectified-flow transformer, ≈1.5B params | Confirmed. README Updates: "Release of TripoSG 1.5B parameter rectified flow model and VAE trained on 2048 latent tokens" | *documented* ([README](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/README.md)) |
 | 2 | Shapes use 2,048 latent tokens | Confirmed (same README line). Pipeline `prepare_latents` builds `(batch, num_tokens, in_channels)` | *documented* ([README](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/README.md), [pipeline](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/triposg/pipelines/pipeline_triposg.py)) |
 | 3 | Image conditioning is a pretrained vision encoder, reportedly DINOv2-class | Confirmed as DINOv2 itself. Pipeline imports `Dinov2Model, BitImageProcessor` and `encode_image` uses `image_encoder_dinov2(...).last_hidden_state`; acknowledgements thank DINOv2 | *documented* ([pipeline](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/triposg/pipelines/pipeline_triposg.py), [README](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/README.md)) |
 | 4 | CLIP + DINOv2 dual conditioning | Partially confirmed only. A secondary summary of the paper mentions "CLIP-DINOv2 dual-conditioning", but the inspected pipeline file shows DINOv2. Whether CLIP also feeds the transformer needs a transformer-config read in Phase 1 | *unverified* |
@@ -39,7 +40,7 @@ Label key: *documented* = an inspected source states it (linked); *unverified*
 | 6 | VAE decodes latents into SDF/occupancy; mesh extraction → triangles | Confirmed SDF (not occupancy). README: "Advanced VAE Architecture: Uses Signed Distance Functions (SDFs) with hybrid supervision (SDF + normal + eikonal)"; pipeline decodes via `vae.decode(latents, sampled_points).sample` through `hierarchical_extract_geometry` or `set_flash_decoder`/`flash_extract_geometry`, then `trimesh.Trimesh(v, f)`; optional decimation via pymeshlab quadric-edge-collapse (`--faces`) | *documented* ([README](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/README.md), [pipeline](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/triposg/pipelines/pipeline_triposg.py), [inference script](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/scripts/inference_triposg.py)) |
 | 7 | Sampling defaults: steps, guidance, CFG doubles batch | Confirmed. Defaults `num_inference_steps=50`, `guidance_scale=7.0`, `seed=42`, `device=cuda`, `dtype=float16`; `do_classifier_free_guidance = guidance_scale > 1`; guided path does `torch.cat([latents] * 2)` then `chunk(2)` guidance | *documented* ([inference script](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/scripts/inference_triposg.py), [pipeline](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/triposg/pipelines/pipeline_triposg.py)) |
 | 8 | Scheduler | FlowMatchEulerDiscreteScheduler (`FlowMatchEulerDiscreteScheduler` import in pipeline) | *documented* ([pipeline](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/triposg/pipelines/pipeline_triposg.py)) |
-| 9 | GPU requirement ~8 GB VRAM | Confirmed. README System Requirements: "CUDA-enabled GPU with at least 8GB VRAM" | *documented* ([README](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/README.md)) |
+| 9 | GPU requirement ≈8 GB VRAM | Confirmed. README System Requirements: "CUDA-enabled GPU with at least 8GB VRAM" | *documented* ([README](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/README.md)) |
 | 10 | 4B MoE / 4096-token scaling variant | Paper describes MoE scaling per the prompt; README advertises a separate CFG-distilled 512-token scribble model, not the ship target. Ship target stays the 1.5B/2048 model unless evidence forces a change request | *documented* (prompt §2 + paper [abs](https://arxiv.org/abs/2502.06608)/[html](https://arxiv.org/html/2502.06608v3)); MoE details *unverified* pending paper §3.2 read in Phase 1 |
 
 Exact component shapes, dtypes, and per-component parameter counts (transformer
@@ -66,12 +67,12 @@ costs need configs + on-device measurement (`phys_footprint` /
 `VmHWM` / `dumpsys meminfo`) in Phase 2.
 
 Revision (16.0 + 6.0 GB device): the Xiaomi has 16 GB physical RAM plus
-6 GB system RAM expansion (~22 GB total, ~16 GB usable high-speed). The old
+6 GB system RAM expansion (≈22 GB total, ≈16 GB usable high-speed). The old
 6 GB verdict no longer applies.
 Revised verdict: GO for an INT8 or INT4-weight-only MVP with sequential
 load/unload, memory-mapped weights, flash decoder, fewer steps, and a faces
 cap; FP16 full-pipeline is plausible but unproven and stays a stretch goal.
-Why still quantized-first: 1.5B params alone are ~3.0 GB in FP16, and the app
+Why still quantized-first: 1.5B params alone are ≈3.0 GB in FP16, and the app
 shares the phone with the OS plus attention/KV buffers at 2,048 tokens and
 the extraction grid, so peak per-stage RAM still has to be measured on the
 device (`dumpsys meminfo` / `VmHWM`) before any FP16 fit claim. The
@@ -106,7 +107,7 @@ cap holds: only manifests, hashes, scripts, and small logs go into git.
 
 No, not the full reference. Your machine (no CUDA, Intel HD 620 + AMD R7
 M445, 4 cores, 15 GB RAM) can host the parity-harness code and a tiny reduced
-plumbing smoke test, but a 1.5B FP32 reference over ≥20 images × 50 steps plus
+plumbing smoke test, but a 1.5B FP32 reference over 5 images × 50 steps plus
 hierarchical extraction would take hours per image and risk RAM pressure. Do
 not run the golden set here.
 
@@ -129,7 +130,7 @@ runtime):
 
 ## 6. Demoable MVP for Nov 5, 10:00 AM (GMT+8), one platform first
 
-Clock: 17:55 now → 10:00 tomorrow (~16 h). Riskiest step goes first: the
+Clock: 17:55 now → 10:00 tomorrow (≈16 h). Riskiest step goes first: the
 minimal on-device spike below runs before the golden set is polished.
 Fallback: at 04:00 I stop and report what is actually working (spike numbers,
 golden status, blockers) so you can choose the demo path.
@@ -174,23 +175,23 @@ Order of work (spike first):
    `TripoSGDiTModel`, width 2048, 21 layers, 16 heads, in_channels 64,
    cross_attention_dim 1024; weight file
    `transformer/diffusion_pytorch_model.safetensors` is 5758280104 bytes
-   (~5.36 GiB FP32). One guided step doubles the batch, so activations run
-   at batch 2 × 2048 tokens; attention scores alone are ~0.5 GiB transient
+   (≈5.36 GiB FP32). One guided step doubles the batch, so activations run
+   at batch 2 × 2048 tokens; attention scores alone are ≈0.5 GiB transient
    per layer at FP32.
    FP32 verdict: STOP — weights alone (5.36 GiB) exceed the 4.6 GB measured
    available on the phone, before ORT overhead and activations. No FP32
    transformer download or export; arithmetic, no experiment needed.
-   Next: FP16 single step (~2.68 GiB weights, ~3.2 GB estimated peak, fits)
+   Next: FP16 single step (≈2.68 GiB weights, ≈3.2 GB estimated peak, fits)
    then QNN-vs-CPU on the same artifact. The FP16 path still downloads the
    5.36 GiB FP32 file first (over the 2 GB line: needs your OK), and laptop
-   export peak is ~10 GB (close everything; the laptop already froze once).
+   export peak is ≈10 GB (close everything; the laptop already froze once).
    QNN availability on-device is unverified until the bench lists providers.
    FP16 export (`bench/spike_transformer_export.py`, black+flake8 clean):
    meta-device init, safetensors mmap, per-tensor FP16 cast (no FP32 copy),
    real encoder baseline as cond plus zeros as uncond, fixed seed
    latents/timestep saved as `.npy`, ONNX with external data
    (`external_data=True` exists in torch 2.5.1). Expected laptop peak
-   ~5–7 GiB (2.68 GiB FP16 dict shared into the model, FP16 trace
+   ≈5–7 GiB (2.68 GiB FP16 dict shared into the model, FP16 trace
    activations at batch 2); the script prints measured peak RSS, which you
    report back. Export command for your terminal (after closing Chrome and
    other VS Code windows, transformer download finished):
@@ -200,19 +201,19 @@ Order of work (spike first):
    `~/.cache/triposg/TripoSG` on sys.path (no setup.py, so no pip git
    install); `diffusers==0.30.3` + `einops` installed in the env;
    meta-device `from_config(load_config(...))`; float32 timestep 1000.0
-   (step 0 on the RectifiedFlowScheduler 1000→~20 scale, matching your
+   (step 0 on the RectifiedFlowScheduler 1000→≈20 scale, matching your
    Colab step0 goldens); no CPU FP16 baseline forward (no FP16 math on
    the laptop) — parity comes from your Colab step0_*.npy, whose exact
    inputs the phone runs. Smoke first: `--smoke` builds a 2-layer/256-wide
    random config, traces, and re-runs it in ORT before the big export.
    QNN AAR (`onnxruntime-android-qnn` 1.22.0, Maven): 6796460 bytes
-   (~6.5 MiB), arm64 `.so` staged; it ships no HTP backend libs, so the NPU
+   (≈6.5 MiB), arm64 `.so` staged; it ships no HTP backend libs, so the NPU
    run depends on the vendor lib on the device (default
    `/vendor/lib64/libQnnHtp.so`), unverified until the run. `bench.cpp`
    now takes `[runs] [cpu|qnn] [backend] [extra inputs...]` with FP16 I/O;
    `spike_adb_bench.sh` takes MODEL/INPUT/OUTPUT/PROVIDER/EXTRA. Phone
    verdict so far: FP32 transformer CANNOT fit (stopped); FP16 CPU baseline
-   expected ~3.2 GB peak, fits — run it as the baseline before QNN.
+   expected ≈3.2 GB peak, fits — run it as the baseline before QNN.
    04:00 report: encoder on-device PASSED (6507 ms median, 2.47 GB peak,
    parity 5.39e-05); transformer FP16 export and Colab goldens still
    pending on your side; recommended demo path is §9.
@@ -223,10 +224,10 @@ Order of work (spike first):
    Env (approved, you run it outside the sandbox — conda has no writable
    dirs or pkgs cache inside it): `conda create -n triposg-spike
    python=3.10`, then CPU-only torch plus transformers, onnx, onnxruntime,
-   flake8. Measured wheel sizes: onnxruntime 1.22.0 cp310 ~15.6 MiB, onnx
-   1.23.2 cp310 ~8.5 MiB, transformers ~12.4 MiB; torch 2.5.1+cpu and the
-   conda python env are estimates (~190 MiB and ~150–250 MiB), pip/conda
-   print exact sizes before fetching. Total estimate ~0.5 GiB, well under
+   flake8. Measured wheel sizes: onnxruntime 1.22.0 cp310 ≈15.6 MiB, onnx
+   1.23.2 cp310 ≈8.5 MiB, transformers ≈12.4 MiB; torch 2.5.1+cpu and the
+   conda python env are estimates (≈190 MiB and ≈150–250 MiB), pip/conda
+   print exact sizes before fetching. Total estimate ≈0.5 GiB, well under
    the 2 GB line. Pin `onnxruntime==1.22.0` (verified cp310 wheel; latest
    dropped 3.10).
    adb (phone visible only outside the sandbox): you run the step scripts
@@ -242,7 +243,8 @@ Order of work (spike first):
    peak RAM per piece; that decides FP16 vs. INT8 vs. INT4 and the step/face
    knobs.
 2. Golden set (5 images, you run the notebook): only after the spike runs.
-   Full 20-image gate is cut to 5 for the deadline; the gap is documented.
+   The eval set is 5 images (plan updated 2026-11-06): its size only bounds
+   parity confidence, not on-device model speed or output quality.
 
 Keep: audit (this file), 5-image Colab goldens, one runtime spike on
 Android, real stage labels, cancel on background, placeholder behind env
@@ -310,14 +312,14 @@ parity vs `dinov2_last_hidden_state.npy`: max abs 6.03e-05, mean abs
 `logs/spike/phone_bench_dinov2_224.log`) → report the number
 live — and frame everything after the encoder as measured-next-steps, not
 done: FP16 one-step export (your terminal, smoke first), FP16 CPU baseline
-(~3.2 GB expected), then QNN. Do NOT promise full-mesh conversion in the
+(≈3.2 GB expected), then QNN. Do NOT promise full-mesh conversion in the
 demo: no transformer output has run on any device yet, and FP32 transformer
 provably cannot fit. If the FP16 export lands before 10:00, add the
 one-step CPU-vs-QNN latency table; if QNN fails, the honest fallback is
 FP16 CPU with reduced steps. Backgrounding cancels; placeholder stays
 behind its env flag.
 FP16 export FAILED on the laptop (your watchdog, 06:09:58, after 61 min):
-peak RSS 9848728 kB (~9.4 GiB, above the ~5–7 estimate — the trace holds
+peak RSS 9848728 kB (≈9.4 GiB, above the ≈5–7 estimate — the trace holds
 more than modeled), free memory down to 1.55 GB, no output written, and
 stdout was buffered so nothing was visible (use `python -u` next time).
 Transformer phone step is POST-DEMO: export it on a cloud machine with
@@ -333,3 +335,75 @@ Transformer phone step is POST-DEMO: export it on a cloud machine with
 - <https://huggingface.co/VAST-AI/TripoSG>
 - <https://huggingface.co/briaai/RMBG-1.4>
 - <https://arxiv.org/abs/2502.06608> and <https://arxiv.org/html/2502.06608v3>
+
+---
+
+# Phase 1: Reference and Parity Method
+
+Status: reference goldens landed; parity harness committed on
+`on-device-pipeline`. Thresholds below were fixed before any optimization.
+
+## 1. Eval set (5 images, fixed)
+
+`ml/triposg-mobile/eval/manifest_5.json`: 5 rembg/u2net RGBA cut-outs of
+TripoSG example images (ids `hjswed`, `iuvbww`, `qwvfsd`, `uegvsd`,
+`yuyyuw`; seeds 42–46). The set was reduced from 20 to 5 on purpose: its
+size only bounds parity confidence, it does not change on-device model
+speed or output quality. The same cut-outs are the pre-cut inputs the
+phone gets (RMBG is skipped for the MVP).
+
+## 2. What the goldens are
+
+Per id, `ml/triposg-mobile/reference/goldens_5/<id>/` holds the Colab
+(Tesla T4, FP32, 50 steps, guidance 7.0, fixed seed) component-boundary
+tensors plus the final mesh:
+
+- `input_rgba.png`, `prepared_input.png` (official `prepare_image` with
+  `rmbg_net=None` on the pre-cut RGBA);
+- `dinov2_pixel_values.npy`, `dinov2_last_hidden_state.npy`;
+- `step0_latent_model_input.npy`, `step0_timestep.npy`,
+  `step0_encoder_hidden_states.npy`, `step0_noise_pred.npy` (batch-2
+  guided-step tensors: row 0 = uncond with zero encoder states, row 1 =
+  cond with the real DINOv2 states);
+- `final_latents.npy`;
+- `mesh.glb` (official pipeline mesh extraction, hierarchical 505³ final
+  grid, same construction as `scripts/inference_triposg.py`; 660k–2.9M
+  faces) and `mesh.display.glb` (quadric-edge-collapse decimated to
+  ~80k faces by `reference/decimate_display.py` for the demo path).
+
+`reference/goldens_5/report.json` (the only golden file in git) records
+the TripoSG commit (`fc5c4099`), weights revision, package versions, and
+the sha256 of every per-id file. Large tensors/meshes are git-ignored.
+
+## 3. Metrics and thresholds
+
+- Tensors (`parity/tensor_parity.py`, single math implementation;
+  `parity/check_step0.py` is a thin wrapper): max_abs, mean_abs, rel_l2,
+  cosine, whole-tensor plus per-batch-row. Gates in
+  `parity/thresholds.json`, justified in `parity/THRESHOLDS.md`: DINOv2
+  hidden state (cosine ≥ 0.99999, rel_l2 ≤ 1e-4 — phone CPU already
+  measures 2.8e-6); one-step noise_pred (cosine ≥ 0.999, rel_l2 ≤ 1e-2 —
+  phone NPU measures 0.9999959 / 4.2e-3); final latents looser
+  (0.99 / 5e-2, provisional — FP16/NPU error compounds over 50 steps).
+- Meshes (`parity/mesh_parity.py`): symmetric Chamfer (absolute and /
+  reference diagonal) + F-score at τ = 1% of the diagonal over 20000
+  seeded samples via `scipy.cKDTree` (the old dense 20000×20000 matrix
+  peaked at ~3.2 GB), plus volume IoU on a 64³ occupancy over the union
+  bbox — ray parity when both meshes are watertight, documented
+  surface-fill fallback otherwise, with the method and watertight flags
+  in the output. Optional `--render` writes 3 orthographic views.
+  Initial gates (chamfer/diag ≤ 1e-2, F ≥ 0.90, IoU ≥ 0.95) clear
+  decimation noise (~1e-4) and resampling noise (few e-3) with margin and
+  may only be tightened later.
+
+## 4. Reproduce
+
+On Colab (GPU runtime, ≥8 GB VRAM): open
+`ml/triposg-mobile/reference/triposg_golden_5.ipynb`, run all cells, bring
+back the zip over `reference/goldens_5/`. On the laptop: one command runs
+hash verification, both mesh baselines ((a) display-vs-full, (b) two
+sampling seeds), and writes `logs/phase1/phase1_report.{json,md}` —
+`ml/triposg-mobile/README.md` has the setup and run commands.
+`parity/run_phase1.py --candidate-dir` reuses the same table for later
+candidate outputs. `parity/test_parity.py` holds the synthetic harness
+regression tests (no goldens needed).

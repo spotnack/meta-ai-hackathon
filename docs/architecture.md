@@ -108,7 +108,15 @@ ml/
     └── bench/ndk/                               # NDK benchmark sources (bench.cpp, CMake, build.sh).
     ├── bench/spike_transformer_export.py        # FP16 one-step export (mmap, external data).
     ├── eval/manifest_5.json                       # 5-image golden-set manifest (pre-cut inputs, fixed seeds).
-    └── reference/triposg_golden_5.ipynb           # Colab GPU notebook you run for the 5 goldens.
+    ├── reference/triposg_golden_5.ipynb           # Colab GPU notebook you run for the 5 goldens.
+    ├── reference/decimate_display.py              # Decimate goldens to ~80k-face display meshes.
+    ├── parity/tensor_parity.py                    # Generic tensor comparator (single math implementation).
+    ├── parity/check_step0.py                      # Thin one-step gate wrapper over tensor_parity.
+    ├── parity/mesh_parity.py                      # Chamfer + F-score (cKDTree) + volume IoU + --render.
+    ├── parity/thresholds.json + THRESHOLDS.md     # Acceptance thresholds, fixed before optimizing.
+    ├── parity/run_phase1.py                       # One-command Phase 1 driver (hashes, baselines, report).
+    ├── parity/test_parity.py                      # Synthetic harness regression tests (pytest).
+    └── logs/phase1/                               # phase1_report.json + .md (git-ignored raw logs).
 src/
 └── spotnack-muse/                                 # Yarn workspace root.
     ├── .yarn/                                     # Yarn Berry releases and cache.

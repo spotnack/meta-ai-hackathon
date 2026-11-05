@@ -28,7 +28,7 @@ Checkpoint: commit audit, then stop and wait for maintainer review before Phase 
 
 ## Phase 1 — Desktop reference and golden data
 
-What: run official TripoSG PyTorch FP32 on a fixed ≥20-image license-compatible eval set (fixed seeds); save golden tensors at each component boundary + final meshes; write the parity harness (max abs/relative error per component; Chamfer, F-score@stated-threshold, volume IoU vs. reference mesh; rendered views); set and justify acceptance thresholds before optimizing.
+What: run official TripoSG PyTorch FP32 on a fixed 5-image license-compatible eval set (fixed seeds; reduced from 20 on 2026-11-06 — the eval set size only bounds parity confidence, it does not change on-device model speed or output quality); save golden tensors at each component boundary + final meshes; write the parity harness (max abs/relative error per component; Chamfer, F-score@stated-threshold, volume IoU vs. reference mesh; rendered views); set and justify acceptance thresholds before optimizing.
 
 Files you will create or change:
 
