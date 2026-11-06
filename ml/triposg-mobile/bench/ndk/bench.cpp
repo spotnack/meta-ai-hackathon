@@ -1,12 +1,20 @@
-// Minimal on-device spike runner: one DINOv2 encoder forward per run.
-// Links against the prebuilt onnxruntime .so from the Android AAR.
-// Usage: spike_bench model.onnx input.npy output.npy [timed_runs]
-// Prints per-run ms, median/p90, output shape. Exit nonzero on failure.
+// On-device bench runner: runs one model (encoder or one transformer piece)
+// per invocation and times it. Links against the prebuilt onnxruntime .so
+// from the Android AAR.
+// Usage: spike_bench model.onnx input.npy output.npy [runs] [cpu|qnn]
+//        [qnn_backend_path]
+// Fetches ALL session outputs (argv[3] for the first, <stem>_<i>.npy for
+// the rest). Prints median/p90 plus session-create time and VmHWM readings.
+// Env SPIKE_OPT=all|basic selects the graph optimization level.
+// Env SPIKE_QNN_OPTS="key=value,..." merges extra QNN provider options
+// after the defaults (a QNN GPU backend is picked by a libQnnGpu.so path).
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <mutex>
 #include <numeric>
 #include <string>
 #include <unordered_map>
@@ -111,6 +119,51 @@ void write_npy(const char* path, const std::vector<int64_t>& shape,
 
 }  // namespace
 
+// QNN verbose-log sink: ORT calls this per message; it appends to a file
+// (capped so a chatty run cannot fill the device). Only enabled for qnn.
+namespace {
+
+std::FILE* g_verbose_log = nullptr;
+std::mutex g_verbose_mutex;
+size_t g_verbose_bytes = 0;
+constexpr size_t kVerboseCap = 4u * 1024u * 1024u;
+
+void verbose_to_file(void*, OrtLoggingLevel, const char*, const char*,
+                     const char*, const char* message) {
+  std::lock_guard<std::mutex> lock(g_verbose_mutex);
+  if (g_verbose_log != nullptr && g_verbose_bytes < kVerboseCap) {
+    int n = std::fprintf(g_verbose_log, "%s\n", message);
+    if (n > 0) g_verbose_bytes += static_cast<size_t>(n);
+  }
+}
+
+long vmhwm_kb() {
+  std::FILE* f = std::fopen("/proc/self/status", "r");
+  if (f == nullptr) return -1;
+  char line[256];
+  long val = -1;
+  while (std::fgets(line, sizeof(line), f) != nullptr) {
+    if (std::strncmp(line, "VmHWM:", 6) == 0) {
+      val = std::strtol(line + 6, nullptr, 10);
+      break;
+    }
+  }
+  std::fclose(f);
+  return val;
+}
+
+size_t count_occurrences(const std::string& hay, const std::string& needle) {
+  size_t n = 0;
+  size_t pos = 0;
+  while ((pos = hay.find(needle, pos)) != std::string::npos) {
+    ++n;
+    pos += needle.size();
+  }
+  return n;
+}
+
+}  // namespace
+
 uint16_t float_to_half(float v) {
   uint32_t bits;
   std::memcpy(&bits, &v, 4);
@@ -143,39 +196,166 @@ int main(int argc, char** argv) {
   if (argc < 4) {
     std::fprintf(stderr,
                  "usage: %s model.onnx input.npy output.npy [runs] "
-                 "[cpu|qnn] [qnn_backend_path]\n",
+                 "[cpu|qnn] [qnn_backend_path]\n"
+                 "  env SPIKE_OPT=all|basic selects the graph optimization "
+                 "level (default all).\n",
                  argv[0]);
     return 1;
   }
-  const int timed_runs = argc > 4 ? std::atoi(argv[4]) : 5;
+  int timed_runs = argc > 4 ? std::atoi(argv[4]) : 5;
+  if (timed_runs < 1) timed_runs = 1;
   const std::string provider = argc > 5 ? argv[5] : "cpu";
+  if (provider != "cpu" && provider != "qnn") {
+    std::fprintf(stderr, "unknown provider %s (cpu|qnn)\n", provider.c_str());
+    return 1;
+  }
+  const bool is_qnn = (provider == "qnn");
   const std::string qnn_backend =
       argc > 6 ? argv[6] : "/vendor/lib64/libQnnHtp.so";
+  // A QNN GPU backend is selected by backend path alone (docs: backend_path
+  // is the alternative to backend_type). HTP-only options are skipped for it.
+  const bool is_gpu = is_qnn && qnn_backend.size() >= 12 &&
+      qnn_backend.compare(qnn_backend.size() - 12, 12, "libQnnGpu.so") == 0;
+  GraphOptimizationLevel opt_level = ORT_ENABLE_ALL;
+  const char* opt_env = std::getenv("SPIKE_OPT");
+  const std::string opt_str = (opt_env != nullptr) ? opt_env : "all";
+  if (opt_str == "all") {
+    opt_level = ORT_ENABLE_ALL;
+  } else if (opt_str == "basic") {
+    opt_level = ORT_ENABLE_BASIC;
+  } else {
+    std::fprintf(stderr, "unknown SPIKE_OPT=%s (all|basic)\n",
+                 opt_str.c_str());
+    return 1;
+  }
 
   NpyArray input = read_npy(argv[2]);
-  Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "spike");
+  std::string stem = argv[3];
+  if (stem.size() > 4 && stem.substr(stem.size() - 4) == ".npy") {
+    stem = stem.substr(0, stem.size() - 4);
+  }
+
+  std::string verbose_path;
+  if (is_qnn) {
+    verbose_path = stem + "_ort_verbose.log";
+    g_verbose_log = std::fopen(verbose_path.c_str(), "w");
+    if (g_verbose_log == nullptr) {
+      std::fprintf(stderr, "cannot write %s\n", verbose_path.c_str());
+      return 1;
+    }
+  }
+  Ort::Env env = is_qnn
+      ? Ort::Env(ORT_LOGGING_LEVEL_VERBOSE, "spike", verbose_to_file,
+                 nullptr)
+      : Ort::Env(ORT_LOGGING_LEVEL_WARNING, "spike");
   Ort::SessionOptions opts;
   opts.SetIntraOpNumThreads(4);
-  if (provider == "qnn") {
+  // Lowest CPU memory floor: no arena pre-allocation, no pattern reuse.
+  opts.DisableCpuMemArena();
+  opts.DisableMemPattern();
+  opts.SetGraphOptimizationLevel(opt_level);
+  std::string ctx_path;
+  if (is_qnn) {
     std::unordered_map<std::string, std::string> qnn_opts;
     qnn_opts["backend_path"] = qnn_backend;
+    if (!is_gpu) {
+      qnn_opts["htp_performance_mode"] = "burst";
+    }
+    // Extra/override provider options, e.g.
+    // SPIKE_QNN_OPTS="htp_graph_finalization_optimization_mode=1,vtcm_mb=4".
+    const char* qnn_opts_env = std::getenv("SPIKE_QNN_OPTS");
+    if (qnn_opts_env != nullptr) {
+      std::string rest = qnn_opts_env;
+      while (!rest.empty()) {
+        size_t comma = rest.find(',');
+        std::string item = rest.substr(0, comma);
+        size_t eq = item.find('=');
+        if (eq == std::string::npos || eq == 0 || eq + 1 >= item.size()) {
+          std::fprintf(stderr, "bad SPIKE_QNN_OPTS item '%s' (want key=value)\n",
+                       item.c_str());
+          return 1;
+        }
+        qnn_opts[item.substr(0, eq)] = item.substr(eq + 1);
+        if (comma == std::string::npos) break;
+        rest = rest.substr(comma + 1);
+      }
+    }
     opts.AppendExecutionProvider("QNN", qnn_opts);
+    std::printf("qnn_backend=%s\n", is_gpu ? "gpu" : "htp");
+    std::printf("qnn_opts=");
+    bool first_opt = true;
+    for (const auto& kv : qnn_opts) {
+      std::printf("%s%s=%s", first_opt ? "" : ",", kv.first.c_str(),
+                  kv.second.c_str());
+      first_opt = false;
+    }
+    std::printf("\n");
+    // SPIKE_CTX=0 skips the cache: for models that are already precompiled
+    // (AI Hub `precompiled_qnn_onnx`, an EPContext node + model.bin).
+    const char* ctx_env = std::getenv("SPIKE_CTX");
+    const bool want_ctx = !(ctx_env && std::string(ctx_env) == "0");
+    if (!is_gpu && want_ctx) {
+      // Compile the HTP graph once; later runs reload the context binary.
+      // (GPU backend: no context cache — minimal surface for the experiment.)
+      ctx_path = std::string(argv[1]) + "_ctx.onnx";
+      opts.AddConfigEntry("ep.context_enable", "1");
+      opts.AddConfigEntry("ep.context_file_path", ctx_path.c_str());
+      opts.AddConfigEntry("ep.context_embed_mode", "0");
+    }
+    opts.EnableProfiling((stem + "_profile").c_str());
   }
+  auto t_create0 = std::chrono::steady_clock::now();
   Ort::Session session(env, argv[1], opts);
+  auto t_create1 = std::chrono::steady_clock::now();
+  const double create_ms =
+      std::chrono::duration<double, std::milli>(t_create1 - t_create0).count();
+  const long vmhwm_create = vmhwm_kb();
+  std::printf("create_ms=%.1f\n", create_ms);
+  if (is_qnn && !is_gpu) std::printf("ep_context=%s\n", ctx_path.c_str());
 
   Ort::AllocatorWithDefaultOptions alloc;
-  Ort::AllocatedStringPtr in_name = session.GetInputNameAllocated(0, alloc);
-  Ort::AllocatedStringPtr out_name = session.GetOutputNameAllocated(0, alloc);
+  const size_t n_inputs = session.GetInputCount();
+  const size_t n_outputs = session.GetOutputCount();
+  std::vector<std::string> in_name_strs, out_name_strs;
+  for (size_t i = 0; i < n_inputs; ++i) {
+    in_name_strs.push_back(session.GetInputNameAllocated(i, alloc).get());
+  }
+  for (size_t i = 0; i < n_outputs; ++i) {
+    out_name_strs.push_back(session.GetOutputNameAllocated(i, alloc).get());
+  }
+  std::vector<const char*> in_names, out_names;
+  for (const auto& s : in_name_strs) in_names.push_back(s.c_str());
+  for (const auto& s : out_name_strs) out_names.push_back(s.c_str());
   std::vector<int64_t> in_shape = input.shape;
 
   auto mem = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
-  // Single-input models (encoder spike) pass one tensor; the transformer
-  // step model takes hidden_states, timestep, encoder_hidden_states, which
-  // the caller packs by extending this lambda via extra argv npy files.
-  ONNXTensorElementDataType in_type =
-      session.GetInputTypeInfo(0).GetTensorTypeAndShapeInfo().GetElementType();
+  // Single-input models (encoder spike) take one tensor; the split
+  // transformer pieces take N inputs (A: hidden_states + timestep, enc;
+  // B: hidden_in + enc; C: hidden_in + enc + skip_0..6 — blocks ignore
+  // temb, so A's temb output is not forwarded). Extra input files follow the
+  // provider args (argv[6] is the QNN backend path only for qnn runs) in
+  // session input order.
+  std::vector<NpyArray> extra_inputs;
+  const int first_extra = is_qnn ? 7 : 6;
+  for (int a = first_extra; a < argc; ++a) {
+    extra_inputs.push_back(read_npy(argv[a]));
+  }
+  if (extra_inputs.size() + 1 < n_inputs) {
+    std::fprintf(stderr, "need %zu inputs, have 1 + %zu extra files\n",
+                 n_inputs, extra_inputs.size());
+    return 1;
+  }
+  // Convert every input exactly once up front; the Ort::Values below borrow
+  // these buffers and are reused by every run (the old code appended a fresh
+  // converted copy per run and leaked it in a thread_local).
+  std::vector<ONNXTensorElementDataType> in_types;
+  for (size_t i = 0; i < n_inputs; ++i) {
+    in_types.push_back(session.GetInputTypeInfo(i)
+                           .GetTensorTypeAndShapeInfo()
+                           .GetElementType());
+  }
   const bool in_fp16 =
-      in_type == ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16;
+      in_types[0] == ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16;
   std::vector<uint16_t> input_half;
   if (in_fp16) {
     input_half.resize(input.data.size());
@@ -183,79 +363,77 @@ int main(int argc, char** argv) {
       input_half[i] = float_to_half(input.data[i]);
     }
   }
-  // Transformer-step models take 3 inputs; extra input files follow the
-  // provider args (argv[6] is the QNN backend path only for qnn runs).
-  std::vector<NpyArray> extra_inputs;
-  int first_extra = (provider == "qnn") ? 7 : 6;
-  for (int a = first_extra; a < argc; ++a) {
-    extra_inputs.push_back(read_npy(argv[a]));
-  }
-  auto run_once = [&]() {
-    std::vector<Ort::Value> ins;
-    std::vector<const char*> in_names;
-    std::vector<std::string> name_store;
-    size_t n_inputs = 0;
-    {
-      Ort::AllocatorWithDefaultOptions alloc2;
-      for (size_t i = 0; i < session.GetInputCount(); ++i) {
-        name_store.push_back(
-            std::string(session.GetInputNameAllocated(i, alloc2).get()));
+  const size_t n_extra = n_inputs - 1;
+  std::vector<int> conv_kind(n_extra, 0);  // 0=float direct, 1=int64, 2=fp16
+  std::vector<std::vector<int64_t>> keep_i64(n_extra);
+  std::vector<std::vector<uint16_t>> keep_f16(n_extra);
+  for (size_t e = 0; e < n_extra; ++e) {
+    const NpyArray& src = extra_inputs[e];
+    if (in_types[e + 1] == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64) {
+      conv_kind[e] = 1;
+      keep_i64[e].resize(src.data.size());
+      for (size_t i = 0; i < src.data.size(); ++i) {
+        keep_i64[e][i] = static_cast<int64_t>(src.data[i]);
+      }
+    } else if (in_types[e + 1] == ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16) {
+      conv_kind[e] = 2;
+      keep_f16[e].resize(src.data.size());
+      for (size_t i = 0; i < src.data.size(); ++i) {
+        keep_f16[e][i] = float_to_half(src.data[i]);
       }
     }
-    for (size_t i = 0; i < name_store.size(); ++i) {
-      in_names.push_back(name_store[i].c_str());
-    }
-    n_inputs = name_store.size();
-    const NpyArray* src0 = &input;
-    std::vector<uint16_t> half0;
-    if (in_fp16) {
-      half0 = input_half;
+  }
+  std::vector<Ort::Value> ins;
+  ins.reserve(n_inputs);
+  if (in_fp16) {
+    ins.push_back(Ort::Value::CreateTensor<uint16_t>(
+        mem, input_half.data(), input_half.size(), in_shape.data(),
+        in_shape.size()));
+  } else {
+    ins.push_back(Ort::Value::CreateTensor<float>(
+        mem, input.data.data(), input.data.size(), in_shape.data(),
+        in_shape.size()));
+  }
+  for (size_t e = 0; e < n_extra; ++e) {
+    const NpyArray& src = extra_inputs[e];
+    if (conv_kind[e] == 1) {
+      ins.push_back(Ort::Value::CreateTensor<int64_t>(
+          mem, keep_i64[e].data(), keep_i64[e].size(), src.shape.data(),
+          src.shape.size()));
+    } else if (conv_kind[e] == 2) {
       ins.push_back(Ort::Value::CreateTensor<uint16_t>(
-          mem, half0.data(), half0.size(), in_shape.data(), in_shape.size()));
+          mem, keep_f16[e].data(), keep_f16[e].size(), src.shape.data(),
+          src.shape.size()));
     } else {
       ins.push_back(Ort::Value::CreateTensor<float>(
-          mem, input.data.data(), input.data.size(), in_shape.data(),
-          in_shape.size()));
+          mem, const_cast<float*>(src.data.data()), src.data.size(),
+          src.shape.data(), src.shape.size()));
     }
-    for (size_t e = 0; e < extra_inputs.size() && ins.size() < n_inputs;
-         ++e) {
-      const NpyArray& src = extra_inputs[e];
-      ONNXTensorElementDataType et = session.GetInputTypeInfo(ins.size())
-                                         .GetTensorTypeAndShapeInfo()
-                                         .GetElementType();
-      if (et == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64) {
-        std::vector<int64_t> vals(src.data.size());
-        for (size_t i = 0; i < vals.size(); ++i) {
-          vals[i] = static_cast<int64_t>(src.data[i]);
-        }
-        static thread_local std::vector<std::vector<int64_t>> keep;
-        keep.push_back(std::move(vals));
-        ins.push_back(Ort::Value::CreateTensor<int64_t>(
-            mem, keep.back().data(), keep.back().size(), src.shape.data(),
-            src.shape.size()));
-      } else if (et == ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16) {
-        static thread_local std::vector<std::vector<uint16_t>> keeph;
-        keeph.emplace_back(src.data.size());
-        for (size_t i = 0; i < src.data.size(); ++i) {
-          keeph.back()[i] = float_to_half(src.data[i]);
-        }
-        ins.push_back(Ort::Value::CreateTensor<uint16_t>(
-            mem, keeph.back().data(), keeph.back().size(), src.shape.data(),
-            src.shape.size()));
-      } else {
-        ins.push_back(Ort::Value::CreateTensor<float>(
-            mem, const_cast<float*>(src.data.data()), src.data.size(),
-            src.shape.data(), src.shape.size()));
-      }
-    }
-    (void)src0;
-    const char* out_names[] = {out_name.get()};
+  }
+  auto run_once = [&]() {
     return session.Run(Ort::RunOptions{nullptr}, in_names.data(), ins.data(),
-                       ins.size(), out_names, 1);
+                       ins.size(), out_names.data(), out_names.size());
   };
+
+  if (is_qnn) {
+    // One profiling run to record per-node EP placement (each node appears
+    // exactly once), then stop profiling so the timed runs are unperturbed.
+    { std::vector<Ort::Value> probe = run_once(); }
+    Ort::AllocatorWithDefaultOptions prof_alloc;
+    const std::string profile_path =
+        session.EndProfilingAllocated(prof_alloc).get();
+    std::vector<char> praw = read_file(profile_path.c_str());
+    const std::string pstr(praw.begin(), praw.end());
+    const size_t n_qnn = count_occurrences(pstr, "QNNExecutionProvider");
+    const size_t n_cpu = count_occurrences(pstr, "CPUExecutionProvider");
+    std::printf("qnn_nodes=%zu cpu_nodes=%zu\n", n_qnn, n_cpu);
+    std::printf("profile=%s\n", profile_path.c_str());
+  }
 
   run_once();  // warmup not timed beyond this
   run_once();  // second warmup
+  const long vmhwm_warmup = vmhwm_kb();
+  std::printf("vmhwm_warmup_kb=%ld\n", vmhwm_warmup);
   std::vector<double> ms;
   std::vector<Ort::Value> outs;
   for (int i = 0; i < timed_runs; ++i) {
@@ -265,28 +443,47 @@ int main(int argc, char** argv) {
     ms.push_back(
         std::chrono::duration<double, std::milli>(t1 - t0).count());
   }
-  auto out_info = outs[0].GetTensorTypeAndShapeInfo();
-  std::vector<int64_t> out_shape = out_info.GetShape();
-  size_t out_count = 1;
-  for (int64_t d : out_shape) out_count *= static_cast<size_t>(d);
-  std::vector<float> out_float(out_count);
-  if (out_info.GetElementType() == ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16) {
-    uint16_t* hp = outs[0].GetTensorMutableData<uint16_t>();
-    for (size_t i = 0; i < out_count; ++i) {
-      out_float[i] = half_to_float(hp[i]);
+  const long vmhwm_end = vmhwm_kb();
+  // Write every output: argv[3] for the first, <stem>_<i>.npy for the rest
+  // (single-output models like the encoder behave exactly as before).
+  for (size_t o = 0; o < outs.size(); ++o) {
+    auto out_info = outs[o].GetTensorTypeAndShapeInfo();
+    std::vector<int64_t> out_shape = out_info.GetShape();
+    size_t out_count = 1;
+    for (int64_t d : out_shape) out_count *= static_cast<size_t>(d);
+    std::vector<float> out_float(out_count);
+    if (out_info.GetElementType() == ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16) {
+      uint16_t* hp = outs[o].GetTensorMutableData<uint16_t>();
+      for (size_t i = 0; i < out_count; ++i) {
+        out_float[i] = half_to_float(hp[i]);
+      }
+    } else {
+      float* fp = outs[o].GetTensorMutableData<float>();
+      for (size_t i = 0; i < out_count; ++i) out_float[i] = fp[i];
     }
-  } else {
-    float* fp = outs[0].GetTensorMutableData<float>();
-    for (size_t i = 0; i < out_count; ++i) out_float[i] = fp[i];
+    std::string path = (o == 0)
+        ? argv[3]
+        : (stem + "_" + std::to_string(o) + ".npy");
+    write_npy(path.c_str(), out_shape, out_float.data(), out_count);
   }
-  write_npy(argv[3], out_shape, out_float.data(), out_count);
 
   std::sort(ms.begin(), ms.end());
   double p90 = ms[(ms.size() * 9) / 10];
-  std::printf("runs=%d median_ms=%.1f p90_ms=%.1f\n", timed_runs,
-              ms[ms.size() / 2], p90);
+  std::printf(
+      "runs=%d median_ms=%.1f p90_ms=%.1f create_ms=%.1f "
+      "vmhwm_create_kb=%ld vmhwm_end_kb=%ld n_out=%zu\n",
+      timed_runs, ms[ms.size() / 2], p90, create_ms, vmhwm_create, vmhwm_end,
+      outs.size());
   std::printf("out_shape=");
-  for (int64_t d : out_shape) std::printf("%lld ", (long long)d);
-  std::printf("\n");
+  for (int64_t d : outs[0].GetTensorTypeAndShapeInfo().GetShape()) {
+    std::printf("%lld ", (long long)d);
+  }
+  std::printf("n_out=%zu\n", outs.size());
+  if (is_qnn && g_verbose_log != nullptr) {
+    std::fclose(g_verbose_log);
+    g_verbose_log = nullptr;
+    std::printf("ort_verbose_log=%s (%zu bytes)\n", verbose_path.c_str(),
+                g_verbose_bytes);
+  }
   return 0;
 }

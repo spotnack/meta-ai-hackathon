@@ -1,0 +1,30 @@
+/home/lucas/Downloads/meta-ai-hackathon/ml/triposg-mobile/logs/spike-ndk/out-qnn129/build/spike_pipeline: 1 file pushed, 0 skipped. 118.0 MB/s (2875728 bytes in 0.023s)
+/home/lucas/Downloads/meta-ai-hackathon/ml/triposg-mobile/logs/spike-ndk/out-qnn129/libonnxruntime.so: 1 file pushed, 0 skipped. 111.3 MB/s (23990744 bytes in 0.206s)
+/home/lucas/Downloads/meta-ai-hackathon/ml/triposg-mobile/logs/spike/aihub/vae_post/device/model.onnx: 1 file pushed, 0 skipped. 3.4 MB/s (337 bytes in 0.000s)
+/home/lucas/Downloads/meta-ai-hackathon/ml/triposg-mobile/logs/spike/aihub/vae_post/device/model.bin: 1 file pushed, 0 skipped. 42.4 MB/s (413035016 bytes in 9.286s)
+/home/lucas/Downloads/meta-ai-hackathon/ml/triposg-mobile/logs/spike/aihub/vae_query/device/model.onnx: 1 file pushed, 0 skipped. 3.0 MB/s (395 bytes in 0.000s)
+/home/lucas/Downloads/meta-ai-hackathon/ml/triposg-mobile/logs/spike/aihub/vae_query/device/model.bin: 1 file pushed, 0 skipped. 48.6 MB/s (27478968 bytes in 0.540s)
+/home/lucas/Downloads/meta-ai-hackathon/ml/triposg-mobile/logs/spike/phone_pipeline_s10_d8/in/latent_r0.npy: 1 file pushed, 0 skipped. 149.6 MB/s (524416 bytes in 0.003s)
+/home/lucas/Downloads/meta-ai-hackathon/ml/triposg-mobile/logs/spike/phone_pipeline_s10_d8/in/enc_r1.npy: 1 file pushed, 0 skipped. 187.1 MB/s (1052800 bytes in 0.005s)
+create_total_ms=10938.8 n_models=25
+vmhwm_after_load_kb=426496 pss_after_load_kb=12884
+step 1/10 t=1000.0 ms=4618 vmhwm_kb=426496
+step 2/10 t=900.0 ms=4568 vmhwm_kb=426496
+step 3/10 t=800.0 ms=4562 vmhwm_kb=426496
+step 4/10 t=700.0 ms=4605 vmhwm_kb=426496
+step 5/10 t=600.0 ms=5598 vmhwm_kb=426496
+step 6/10 t=500.0 ms=4966 vmhwm_kb=426496
+step 7/10 t=400.0 ms=4570 vmhwm_kb=426496
+step 8/10 t=300.0 ms=4417 vmhwm_kb=426496
+step 9/10 t=200.0 ms=4448 vmhwm_kb=426496
+step 10/10 t=100.0 ms=4450 vmhwm_kb=426496
+sampling_ms=46803 step_median_ms=4570 guidance=7.0
+vae_post_ms=277 kv=(1,2048,1024)
+extract_ms=11229 query_ms=10645 query_calls=195 grid=252 vmhwm_kb=426496
+mc_ms=874 verts=541240 tris=1082504 closed=1 volume=0.671107
+wrote pipe_out/mesh.glb and pipe_out/final_latents.npy total_ms=70159 vmhwm_end_kb=426496 pss_end_kb=179671
+/data/local/tmp/triposg-chain/pipe_out/mesh.glb: 1 file pulled, 0 skipped. 40.2 MB/s (25980652 bytes in 0.617s)
+/data/local/tmp/triposg-chain/pipe_out/final_latents.npy: 1 file pulled, 0 skipped. 27.7 MB/s (524416 bytes in 0.018s)
+pulled mesh.glb + final_latents.npy -> /home/lucas/Downloads/meta-ai-hackathon/ml/triposg-mobile/logs/spike/phone_pipeline_s10_d8/hjswed/
+grade (expect FAIL at reduced steps/depths until ablations land):
+  ~/anaconda3/envs/triposg-spike/bin/python -u ml/triposg-mobile/parity/run_phase1.py --candidate-dir /home/lucas/Downloads/meta-ai-hackathon/ml/triposg-mobile/logs/spike/phone_pipeline_s10_d8

@@ -1,0 +1,77 @@
+ml/triposg-mobile/logs/spike-ndk/out-qnn129/build/spike_chain: 1 file pushed, 0 skipped. 126.6 MB/s (2236776 bytes in 0.017s)
+ml/triposg-mobile/logs/spike-ndk/out-qnn129/libonnxruntime.so: 1 file pushed, 0 skipped. 142.9 MB/s (23990744 bytes in 0.160s)
+ml/triposg-mobile/logs/spike/aihub/chain_remote.txt: 1 file pushed, 0 skipped. 2.9 MB/s (1215 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/b1/latent_r0.npy: 1 file pushed, 0 skipped. 31.4 MB/s (524416 bytes in 0.016s)
+ml/triposg-mobile/logs/spike/b1/timestep_r0.npy: 1 file pushed, 0 skipped. 0.5 MB/s (132 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/b1/enc_r0.npy: 1 file pushed, 0 skipped. 362.0 MB/s (1052800 bytes in 0.003s)
+ml/triposg-mobile/logs/spike/b1/latent_r1.npy: 1 file pushed, 0 skipped. 165.1 MB/s (524416 bytes in 0.003s)
+ml/triposg-mobile/logs/spike/b1/timestep_r1.npy: 1 file pushed, 0 skipped. 1.5 MB/s (132 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/b1/enc_r1.npy: 1 file pushed, 0 skipped. 238.1 MB/s (1052800 bytes in 0.004s)
+ml/triposg-mobile/logs/spike/aihub/head/device/model.onnx: 1 file pushed, 0 skipped. 3.7 MB/s (489 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/aihub/head/device/model.bin: 1 file pushed, 0 skipped. 41.5 MB/s (68035936 bytes in 1.563s)
+ml/triposg-mobile/logs/spike/aihub/blk00/device/model.onnx: 1 file pushed, 0 skipped. 1.7 MB/s (540 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/aihub/blk00/device/model.bin: 1 file pushed, 0 skipped. 41.2 MB/s (247349376 bytes in 5.730s)
+ml/triposg-mobile/logs/spike/aihub/blk01/device/model.onnx: 1 file pushed, 0 skipped. 3.2 MB/s (540 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/aihub/blk01/device/model.bin: 1 file pushed, 0 skipped. 41.5 MB/s (247349376 bytes in 5.689s)
+ml/triposg-mobile/logs/spike/aihub/blk02/device/model.onnx: 1 file pushed, 0 skipped. 5.4 MB/s (540 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/aihub/blk02/device/model.bin: 1 file pushed, 0 skipped. 41.5 MB/s (247349376 bytes in 5.682s)
+ml/triposg-mobile/logs/spike/aihub/blk03/device/model.onnx: 1 file pushed, 0 skipped. 3.7 MB/s (540 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/aihub/blk03/device/model.bin: 1 file pushed, 0 skipped. 41.8 MB/s (247349376 bytes in 5.642s)
+ml/triposg-mobile/logs/spike/aihub/blk04/device/model.onnx: 1 file pushed, 0 skipped. 4.3 MB/s (540 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/aihub/blk04/device/model.bin: 1 file pushed, 0 skipped. 41.4 MB/s (247349376 bytes in 5.698s)
+ml/triposg-mobile/logs/spike/aihub/blk05/device/model.onnx: 1 file pushed, 0 skipped. 2.6 MB/s (540 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/aihub/blk05/device/model.bin: 1 file pushed, 0 skipped. 41.2 MB/s (247349376 bytes in 5.728s)
+ml/triposg-mobile/logs/spike/aihub/blk06/device/model.onnx: 1 file pushed, 0 skipped. 4.4 MB/s (540 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/aihub/blk06/device/model.bin: 1 file pushed, 0 skipped. 41.6 MB/s (247349376 bytes in 5.676s)
+ml/triposg-mobile/logs/spike/aihub/blk07/device/model.onnx: 1 file pushed, 0 skipped. 1.4 MB/s (540 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/aihub/blk07/device/model.bin: 1 file pushed, 0 skipped. 41.3 MB/s (247349376 bytes in 5.717s)
+ml/triposg-mobile/logs/spike/aihub/blk08/device/model.onnx: 1 file pushed, 0 skipped. 3.2 MB/s (540 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/aihub/blk08/device/model.bin: 1 file pushed, 0 skipped. 41.8 MB/s (247349376 bytes in 5.647s)
+ml/triposg-mobile/logs/spike/aihub/blk09/device/model.onnx: 1 file pushed, 0 skipped. 1.7 MB/s (540 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/aihub/blk09/device/model.bin: 1 file pushed, 0 skipped. 40.9 MB/s (247349376 bytes in 5.770s)
+ml/triposg-mobile/logs/spike/aihub/blk10/device/model.onnx: 1 file pushed, 0 skipped. 1.8 MB/s (462 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/aihub/blk10/device/model.bin: 1 file pushed, 0 skipped. 41.7 MB/s (247345144 bytes in 5.662s)
+ml/triposg-mobile/logs/spike/aihub/blk11/device/model.onnx: 1 file pushed, 0 skipped. 2.1 MB/s (534 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/aihub/blk11/device/model.bin: 1 file pushed, 0 skipped. 41.7 MB/s (281317728 bytes in 6.432s)
+ml/triposg-mobile/logs/spike/aihub/blk12/device/model.onnx: 1 file pushed, 0 skipped. 3.0 MB/s (534 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/aihub/blk12/device/model.bin: 1 file pushed, 0 skipped. 41.5 MB/s (281321824 bytes in 6.459s)
+ml/triposg-mobile/logs/spike/aihub/blk13/device/model.onnx: 1 file pushed, 0 skipped. 3.1 MB/s (534 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/aihub/blk13/device/model.bin: 1 file pushed, 0 skipped. 40.6 MB/s (281330016 bytes in 6.602s)
+ml/triposg-mobile/logs/spike/aihub/blk14/device/model.onnx: 1 file pushed, 0 skipped. 5.3 MB/s (534 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/aihub/blk14/device/model.bin: 1 file pushed, 0 skipped. 40.8 MB/s (281330016 bytes in 6.574s)
+ml/triposg-mobile/logs/spike/aihub/blk15/device/model.onnx: 1 file pushed, 0 skipped. 3.6 MB/s (534 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/aihub/blk15/device/model.bin: 1 file pushed, 0 skipped. 41.0 MB/s (281313632 bytes in 6.549s)
+ml/triposg-mobile/logs/spike/aihub/blk16/device/model.onnx: 1 file pushed, 0 skipped. 2.8 MB/s (534 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/aihub/blk16/device/model.bin: 1 file pushed, 0 skipped. 41.1 MB/s (281301344 bytes in 6.533s)
+ml/triposg-mobile/logs/spike/aihub/blk17/device/model.onnx: 1 file pushed, 0 skipped. 1.5 MB/s (534 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/aihub/blk17/device/model.bin: 1 file pushed, 0 skipped. 41.2 MB/s (281330016 bytes in 6.512s)
+ml/triposg-mobile/logs/spike/aihub/blk18/device/model.onnx: 1 file pushed, 0 skipped. 2.5 MB/s (534 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/aihub/blk18/device/model.bin: 1 file pushed, 0 skipped. 41.2 MB/s (281325920 bytes in 6.515s)
+ml/triposg-mobile/logs/spike/aihub/blk19/device/model.onnx: 1 file pushed, 0 skipped. 2.3 MB/s (534 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/aihub/blk19/device/model.bin: 1 file pushed, 0 skipped. 41.3 MB/s (281325920 bytes in 6.493s)
+ml/triposg-mobile/logs/spike/aihub/blk20/device/model.onnx: 1 file pushed, 0 skipped. 0.0 MB/s (534 bytes in 0.015s)
+ml/triposg-mobile/logs/spike/aihub/blk20/device/model.bin: 1 file pushed, 0 skipped. 40.3 MB/s (281313632 bytes in 6.661s)
+ml/triposg-mobile/logs/spike/aihub/tail/device/model.onnx: 1 file pushed, 0 skipped. 5.3 MB/s (343 bytes in 0.000s)
+ml/triposg-mobile/logs/spike/aihub/tail/device/model.bin: 1 file pushed, 0 skipped. 237.3 MB/s (402240 bytes in 0.002s)
+ml/triposg-mobile/logs/spike/qnn250/extract/libQnnHtp.so: 1 file pushed, 0 skipped. 223.9 MB/s (3979248 bytes in 0.017s)
+ml/triposg-mobile/logs/spike/qnn250/extract/libQnnHtpPrepare.so: 1 file pushed, 0 skipped. 101.5 MB/s (85026392 bytes in 0.799s)
+ml/triposg-mobile/logs/spike/qnn250/extract/libQnnHtpV79Stub.so: 1 file pushed, 0 skipped. 82.7 MB/s (791696 bytes in 0.009s)
+ml/triposg-mobile/logs/spike/qnn250/extract/libQnnHtpV79Skel.so: 1 file pushed, 0 skipped. 347.4 MB/s (18513604 bytes in 0.051s)
+ml/triposg-mobile/logs/spike/qnn250/extract/libQnnSystem.so: 1 file pushed, 0 skipped. 104.6 MB/s (4068296 bytes in 0.037s)
+[thermal]   temperature: 281
+[thermal] max_zone: 60554
+[resident] PEAK_VMHWM_KB=308752 create_total_ms=8386.1 vmhwm_after_load_kb=308252 pss_after_load_kb=15978 vmhwm_warmup_kb=308252 pss_warmup_kb=16476 noise_row0_mean=0.009472 noise_row0_maxabs=4.375000 noise_row1_mean=0.005592 noise_row1_maxabs=4.324219 unit 00 head run_ms=28.7 create_ms=207.7 unit 01 blk00 run_ms=300.9 create_ms=303.3 dup_maxabs=0.000e+00 unit 02 blk01 run_ms=306.0 create_ms=299.6 dup_maxabs=0.000e+00 unit 03 blk02 run_ms=295.0 create_ms=297.4 dup_maxabs=0.000e+00 unit 04 blk03 run_ms=309.4 create_ms=336.2 dup_maxabs=0.000e+00 unit 05 blk04 run_ms=297.2 create_ms=351.9 dup_maxabs=0.000e+00 unit 06 blk05 run_ms=293.9 create_ms=360.1 dup_maxabs=0.000e+00 unit 07 blk06 run_ms=288.2 create_ms=332.3 dup_maxabs=0.000e+00 unit 08 blk07 run_ms=296.1 create_ms=366.8 dup_maxabs=0.000e+00 unit 09 blk08 run_ms=303.1 create_ms=509.8 dup_maxabs=0.000e+00 unit 10 blk09 run_ms=279.9 create_ms=358.1 dup_maxabs=0.000e+00 unit 11 blk10 run_ms=282.4 create_ms=370.3 unit 12 blk11 run_ms=326.4 create_ms=499.1 unit 13 blk12 run_ms=322.3 create_ms=402.5 unit 14 blk13 run_ms=309.8 create_ms=406.0 unit 15 blk14 run_ms=281.2 create_ms=423.6 unit 16 blk15 run_ms=299.1 create_ms=452.7 unit 17 blk16 run_ms=282.2 create_ms=527.5 unit 18 blk17 run_ms=321.0 create_ms=399.3 unit 19 blk18 run_ms=325.5 create_ms=384.5 unit 20 blk19 run_ms=310.6 create_ms=400.0 unit 21 blk20 run_ms=327.6 create_ms=372.2 unit 22 tail run_ms=21.8 create_ms=25.1 pass_row0_ms=6223.3 pass_row1_ms=6246.1 vmhwm_end_kb=308252 pss_end_kb=18169 out_shape=2 2048 64  n_models=23 mode=resident runs=3 
+create_total_ms=8386.1 vmhwm_after_load_kb=308252 pss_after_load_kb=15978 vmhwm_warmup_kb=308252 pss_warmup_kb=16476 noise_row0_mean=0.009472 noise_row0_maxabs=4.375000 noise_row1_mean=0.005592 noise_row1_maxabs=4.324219 unit 00 head run_ms=28.7 create_ms=207.7 unit 01 blk00 run_ms=300.9 create_ms=303.3 dup_maxabs=0.000e+00 unit 02 blk01 run_ms=306.0 create_ms=299.6 dup_maxabs=0.000e+00 unit 03 blk02 run_ms=295.0 create_ms=297.4 dup_maxabs=0.000e+00 unit 04 blk03 run_ms=309.4 create_ms=336.2 dup_maxabs=0.000e+00 unit 05 blk04 run_ms=297.2 create_ms=351.9 dup_maxabs=0.000e+00 unit 06 blk05 run_ms=293.9 create_ms=360.1 dup_maxabs=0.000e+00 unit 07 blk06 run_ms=288.2 create_ms=332.3 dup_maxabs=0.000e+00 unit 08 blk07 run_ms=296.1 create_ms=366.8 dup_maxabs=0.000e+00 unit 09 blk08 run_ms=303.1 create_ms=509.8 dup_maxabs=0.000e+00 unit 10 blk09 run_ms=279.9 create_ms=358.1 dup_maxabs=0.000e+00 unit 11 blk10 run_ms=282.4 create_ms=370.3 unit 12 blk11 run_ms=326.4 create_ms=499.1 unit 13 blk12 run_ms=322.3 create_ms=402.5 unit 14 blk13 run_ms=309.8 create_ms=406.0 unit 15 blk14 run_ms=281.2 create_ms=423.6 unit 16 blk15 run_ms=299.1 create_ms=452.7 unit 17 blk16 run_ms=282.2 create_ms=527.5 unit 18 blk17 run_ms=321.0 create_ms=399.3 unit 19 blk18 run_ms=325.5 create_ms=384.5 unit 20 blk19 run_ms=310.6 create_ms=400.0 unit 21 blk20 run_ms=327.6 create_ms=372.2 unit 22 tail run_ms=21.8 create_ms=25.1 pass_row0_ms=6223.3 pass_row1_ms=6246.1 vmhwm_end_kb=308252 pss_end_kb=18169 out_shape=2 2048 64  n_models=23 mode=resident runs=3 
+[thermal] cooling 60 s...
+[thermal]   temperature: 286
+[thermal] max_zone: 60419
+[stream] PEAK_VMHWM_KB=490496 vmhwm_warmup_kb=490376 pss_warmup_kb=22558 noise_row0_mean=0.009472 noise_row0_maxabs=4.375000 noise_row1_mean=0.005592 noise_row1_maxabs=4.324219 unit 00 head run_ms=33.0 create_ms=182.8 unit 01 blk00 run_ms=283.2 create_ms=356.2 dup_maxabs=0.000e+00 unit 02 blk01 run_ms=290.3 create_ms=360.3 dup_maxabs=0.000e+00 unit 03 blk02 run_ms=272.6 create_ms=359.0 dup_maxabs=0.000e+00 unit 04 blk03 run_ms=300.4 create_ms=362.2 dup_maxabs=0.000e+00 unit 05 blk04 run_ms=297.4 create_ms=359.0 dup_maxabs=0.000e+00 unit 06 blk05 run_ms=292.3 create_ms=352.0 dup_maxabs=0.000e+00 unit 07 blk06 run_ms=305.0 create_ms=356.0 dup_maxabs=0.000e+00 unit 08 blk07 run_ms=290.8 create_ms=364.3 dup_maxabs=0.000e+00 unit 09 blk08 run_ms=314.3 create_ms=356.0 dup_maxabs=0.000e+00 unit 10 blk09 run_ms=288.2 create_ms=356.1 dup_maxabs=0.000e+00 unit 11 blk10 run_ms=283.7 create_ms=355.2 unit 12 blk11 run_ms=317.7 create_ms=388.1 unit 13 blk12 run_ms=310.6 create_ms=389.0 unit 14 blk13 run_ms=307.8 create_ms=380.0 unit 15 blk14 run_ms=306.0 create_ms=382.8 unit 16 blk15 run_ms=286.1 create_ms=380.6 unit 17 blk16 run_ms=310.4 create_ms=381.5 unit 18 blk17 run_ms=301.5 create_ms=377.0 unit 19 blk18 run_ms=319.3 create_ms=371.9 unit 20 blk19 run_ms=297.1 create_ms=377.5 unit 21 blk20 run_ms=319.9 create_ms=378.0 unit 22 tail run_ms=28.3 create_ms=116.1 pass_row0_ms=15097.6 pass_row1_ms=15010.9 create_total_ms=8041.5 vmhwm_end_kb=490376 pss_end_kb=18542 out_shape=2 2048 64  n_models=23 mode=stream runs=3 
+vmhwm_warmup_kb=490376 pss_warmup_kb=22558 noise_row0_mean=0.009472 noise_row0_maxabs=4.375000 noise_row1_mean=0.005592 noise_row1_maxabs=4.324219 unit 00 head run_ms=33.0 create_ms=182.8 unit 01 blk00 run_ms=283.2 create_ms=356.2 dup_maxabs=0.000e+00 unit 02 blk01 run_ms=290.3 create_ms=360.3 dup_maxabs=0.000e+00 unit 03 blk02 run_ms=272.6 create_ms=359.0 dup_maxabs=0.000e+00 unit 04 blk03 run_ms=300.4 create_ms=362.2 dup_maxabs=0.000e+00 unit 05 blk04 run_ms=297.4 create_ms=359.0 dup_maxabs=0.000e+00 unit 06 blk05 run_ms=292.3 create_ms=352.0 dup_maxabs=0.000e+00 unit 07 blk06 run_ms=305.0 create_ms=356.0 dup_maxabs=0.000e+00 unit 08 blk07 run_ms=290.8 create_ms=364.3 dup_maxabs=0.000e+00 unit 09 blk08 run_ms=314.3 create_ms=356.0 dup_maxabs=0.000e+00 unit 10 blk09 run_ms=288.2 create_ms=356.1 dup_maxabs=0.000e+00 unit 11 blk10 run_ms=283.7 create_ms=355.2 unit 12 blk11 run_ms=317.7 create_ms=388.1 unit 13 blk12 run_ms=310.6 create_ms=389.0 unit 14 blk13 run_ms=307.8 create_ms=380.0 unit 15 blk14 run_ms=306.0 create_ms=382.8 unit 16 blk15 run_ms=286.1 create_ms=380.6 unit 17 blk16 run_ms=310.4 create_ms=381.5 unit 18 blk17 run_ms=301.5 create_ms=377.0 unit 19 blk18 run_ms=319.3 create_ms=371.9 unit 20 blk19 run_ms=297.1 create_ms=377.5 unit 21 blk20 run_ms=319.9 create_ms=378.0 unit 22 tail run_ms=28.3 create_ms=116.1 pass_row0_ms=15097.6 pass_row1_ms=15010.9 create_total_ms=8041.5 vmhwm_end_kb=490376 pss_end_kb=18542 out_shape=2 2048 64  n_models=23 mode=stream runs=3 
+/data/local/tmp/triposg-chain/out_resident.npy: 1 file pulled, 0 skipped. 5.9 MB/s (1048704 bytes in 0.170s)
+/data/local/tmp/triposg-chain/out_stream.npy: 1 file pulled, 0 skipped. 6.2 MB/s (1048704 bytes in 0.162s)
+pulled outputs -> ml/triposg-mobile/logs/spike/phone_chain_b1/noise_{resident,stream}.npy
+parity (needs only numpy):
+  python -u ml/triposg-mobile/parity/check_step0.py \
+    ml/triposg-mobile/logs/spike/phone_chain_b1/noise_resident.npy ml/triposg-mobile/reference/goldens_5/hjswed/step0_noise_pred.npy
+  python -u ml/triposg-mobile/parity/check_step0.py \
+    ml/triposg-mobile/logs/spike/phone_chain_b1/noise_stream.npy ml/triposg-mobile/reference/goldens_5/hjswed/step0_noise_pred.npy

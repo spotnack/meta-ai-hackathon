@@ -116,7 +116,21 @@ ml/
     ├── parity/thresholds.json + THRESHOLDS.md     # Acceptance thresholds, fixed before optimizing.
     ├── parity/run_phase1.py                       # One-command Phase 1 driver (hashes, baselines, report).
     ├── parity/test_parity.py                      # Synthetic harness regression tests (pytest).
-    └── logs/phase1/                               # phase1_report.json + .md (git-ignored raw logs).
+    ├── logs/phase1/                               # phase1_report.json + .md (git-ignored raw logs).
+    ├── eval/matrix.md                             # Phase 2 per-component × runtime matrix (measured/linked).
+    ├── eval/summary.md                            # Phase 2 recommendation + knob trade-off tables.
+    ├── bench/export_vae.py                        # VAE decoder export: vae_post + vae_query (FP32, fixed N).
+    ├── bench/split_export_step.py                 # Transformer split batch-1 export (23 units, laptop).
+    ├── bench/aihub_compile.py                     # AI Hub compile/profile/manifest (transformer + VAE stems).
+    ├── bench/spike_adb_chain_npu.sh               # One-step chain runs on the phone NPU.
+    ├── bench/spike_adb_pipeline.sh                # Full sampling→mesh runs on the phone NPU.
+    ├── bench/ndk/chain.cpp                        # spike_chain: one guided step over 23 resident units.
+    ├── bench/ndk/pipeline.cpp                     # spike_pipeline: loop + VAE + extract + mesh on device.
+    ├── cpp/extract.{h,cpp}                        # Portable octree SDF extraction (pluggable backend).
+    ├── cpp/mcubes.{h,cpp}                         # Portable marching tetrahedra + outward normals.
+    ├── cpp/glb_writer.{h,cpp}                     # Minimal valid glTF 2.0 binary writer.
+    ├── cpp/test/                                  # Laptop host test (ORT CPU backend, grades vs goldens).
+    └── logs/phase2/                               # Phase 2 parity reports + phone/AI Hub logs (git-ignored).
 src/
 └── spotnack-muse/                                 # Yarn workspace root.
     ├── .yarn/                                     # Yarn Berry releases and cache.

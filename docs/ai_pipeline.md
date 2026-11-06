@@ -7,6 +7,7 @@
 - [On-Device AI Inference Pipeline](#on-device-ai-inference-pipeline)
 - [Phase 0 Audit (checkpoint)](#phase-0-audit-checkpoint)
 - [Phase 1: Reference and Parity Method](#phase-1-reference-and-parity-method)
+- [Phase 2: Runtime Evaluation and Decision](#phase-2-runtime-evaluation-and-decision)
 
 ---
 
@@ -170,7 +171,8 @@ Order of work (spike first):
    `ml/triposg-mobile/logs/spike/phone_bench_run2.log` (git-ignored).
    Your `bench.cpp` npy-dtype fix (`<f4`) stands and is not reverted.
    Superseded: that run used a 518-px input, not the real 224-px one —
-   its 6.5 s / 2.4 GB numbers are discarded (see §9). Re-run pending.
+   its 6.5 s / 2.4 GB numbers are discarded (see §9). Re-run done: the
+   224-px result is below (median 1084 ms, cosine 1.0000001).
    Transformer sizing (config + file list inspected, no download):
    `TripoSGDiTModel`, width 2048, 21 layers, 16 heads, in_channels 64,
    cross_attention_dim 1024; weight file
@@ -322,8 +324,12 @@ FP16 export FAILED on the laptop (your watchdog, 06:09:58, after 61 min):
 peak RSS 9848728 kB (≈9.4 GiB, above the ≈5–7 estimate — the trace holds
 more than modeled), free memory down to 1.55 GB, no output written, and
 stdout was buffered so nothing was visible (use `python -u` next time).
-Transformer phone step is POST-DEMO: export it on a cloud machine with
-≥16 GB RAM. No further heavy jobs on this laptop before 10:00.
+> Update (Phase 2, supersedes this whole demo-time block): the
+> transformer export did run on the laptop — as 23 batch-1 FP32 units via
+> split export, no cloud machine — and the full on-device pipeline now
+> passes the mesh gate 5/5 at 50 steps. See "Phase 2: runtime evaluation
+> and decision" below; the pre-demo cautions above are history, not
+> status.
 
 ## Sources (all inspected this turn, underlying content non-empty)
 
@@ -407,3 +413,45 @@ sampling seeds), and writes `logs/phase1/phase1_report.{json,md}` —
 `parity/run_phase1.py --candidate-dir` reuses the same table for later
 candidate outputs. `parity/test_parity.py` holds the synthetic harness
 regression tests (no goldens needed).
+
+---
+
+# Phase 2: Runtime Evaluation and Decision
+
+Status: full pipeline runs on-device and passes the mesh gate 5/5.
+Evidence: `ml/triposg-mobile/eval/matrix.md` (per-component × runtime),
+`ml/triposg-mobile/eval/summary.md` (recommendation + knob tables),
+`ml/triposg-mobile/logs/phase2/` (parity reports + phone logs).
+
+## Decision (recommended hybrid configuration)
+
+- Background removal: rembg u2net on CPU (Apache-2.0; Phase 3 port).
+  RMBG-1.4 excluded (non-commercial).
+- DINOv2 encoder: FP32 on ORT CPU — 1084 ms median, 2.47 GB transient
+  peak, cosine 1.0000001 vs golden
+  (`logs/spike/phone_bench_dinov2_224.log`).
+- Transformer (23 batch-1 FP32 units) + `vae_post` + `vae_query`:
+  QNN HTP via AI Hub EPContext (QAIRT 2.50, ORT 1.29.0 + qnn-runtime
+  2.50.0, burst), FP32 throughout — 100% NPU layers, stream rejected.
+- Sampling: 50 steps, CFG 7.0, batch-1 uncond+cond rows.
+- Extraction d0=6, d1=8 in the portable C++ core on CPU.
+
+## Evidence highlights
+
+- One guided transformer step on NPU: 3.5 s resident burst, parity
+  cosine 0.9999959 / rel_l2 4.2e-3 vs the golden step-0 noise.
+- VAE on NPU: post 199.6 ms (533 NPU layers), query 33.7 ms per 8192
+  points (51 NPU layers) — `logs/phase2/aihub_vae.log`.
+- C++ extraction exactness (host, golden latents, d1=9): chamfer/diag
+  3.488e-3, F 0.999, IoU 0.9985 — at the sampling-noise floor.
+- Phone end-to-end (Xiaomi 15 Ultra): 50 steps d1=8 passes 5/5
+  (`logs/phase2/parity_s50_d8.md`), ≈253–420 s total; 25 steps passes
+  2/5 with same-object drift on the rest. VmHWM ≤ 677 MB, PSS ≤ 363 MB.
+- `final_latents` is report-only: cosine 0.945–0.984 at 50 steps (CFG +
+  ODE compound the 4e-3 step error) while every mesh passes — the mesh
+  gate, not the latent gate, is the end-to-end acceptance.
+- Not evaluated, with reasons: LiteRT/ExecuTorch/Core ML (no iOS
+  device; HTP already meets the gate), background-removal port and
+  on-device decimation (≈1M tris / ≈25–50 MB per GLB must shrink to
+  ≈100k faces for Explore cards) — both Phase 3, with 5.6 GB + 440 MB
+  of model bins forcing download management first.

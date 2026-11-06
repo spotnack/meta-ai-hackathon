@@ -1,0 +1,70 @@
+/home/lucas/Downloads/meta-ai-hackathon/ml/triposg-mobile/logs/spike-ndk/out-qnn129/build/spike_pipeline: 1 file pushed, 0 skipped. 246.4 MB/s (2875728 bytes in 0.011s)
+/home/lucas/Downloads/meta-ai-hackathon/ml/triposg-mobile/logs/spike-ndk/out-qnn129/libonnxruntime.so: 1 file pushed, 0 skipped. 141.3 MB/s (23990744 bytes in 0.162s)
+/home/lucas/Downloads/meta-ai-hackathon/ml/triposg-mobile/logs/spike/aihub/vae_post/device/model.onnx: 1 file pushed, 0 skipped. 5.6 MB/s (337 bytes in 0.000s)
+/home/lucas/Downloads/meta-ai-hackathon/ml/triposg-mobile/logs/spike/aihub/vae_post/device/model.bin: 1 file pushed, 0 skipped. 40.8 MB/s (413035016 bytes in 9.650s)
+/home/lucas/Downloads/meta-ai-hackathon/ml/triposg-mobile/logs/spike/aihub/vae_query/device/model.onnx: 1 file pushed, 0 skipped. 0.9 MB/s (395 bytes in 0.000s)
+/home/lucas/Downloads/meta-ai-hackathon/ml/triposg-mobile/logs/spike/aihub/vae_query/device/model.bin: 1 file pushed, 0 skipped. 46.3 MB/s (27478968 bytes in 0.566s)
+/home/lucas/Downloads/meta-ai-hackathon/ml/triposg-mobile/logs/spike/phone_pipeline_s50_d8/in_yuyyuw/latent_r0.npy: 1 file pushed, 0 skipped. 48.7 MB/s (524416 bytes in 0.010s)
+/home/lucas/Downloads/meta-ai-hackathon/ml/triposg-mobile/logs/spike/phone_pipeline_s50_d8/in_yuyyuw/enc_r1.npy: 1 file pushed, 0 skipped. 70.4 MB/s (1052800 bytes in 0.014s)
+create_total_ms=11760.1 n_models=25
+vmhwm_after_load_kb=428148 pss_after_load_kb=13655
+step 1/50 t=1000.0 ms=4996 vmhwm_kb=428148
+step 2/50 t=980.0 ms=4973 vmhwm_kb=428148
+step 3/50 t=960.0 ms=4954 vmhwm_kb=428148
+step 4/50 t=940.0 ms=5023 vmhwm_kb=428148
+step 5/50 t=920.0 ms=4995 vmhwm_kb=428148
+step 6/50 t=900.0 ms=4983 vmhwm_kb=428148
+step 7/50 t=880.0 ms=5092 vmhwm_kb=428148
+step 8/50 t=860.0 ms=5131 vmhwm_kb=428148
+step 9/50 t=840.0 ms=6061 vmhwm_kb=428148
+step 10/50 t=820.0 ms=5550 vmhwm_kb=428148
+step 11/50 t=800.0 ms=5198 vmhwm_kb=428148
+step 12/50 t=780.0 ms=5231 vmhwm_kb=428148
+step 13/50 t=760.0 ms=5253 vmhwm_kb=428148
+step 14/50 t=740.0 ms=5306 vmhwm_kb=428148
+step 15/50 t=720.0 ms=5331 vmhwm_kb=428148
+step 16/50 t=700.0 ms=5941 vmhwm_kb=428148
+step 17/50 t=680.0 ms=5669 vmhwm_kb=428148
+step 18/50 t=660.0 ms=5206 vmhwm_kb=428148
+step 19/50 t=640.0 ms=5350 vmhwm_kb=428148
+step 20/50 t=620.0 ms=5299 vmhwm_kb=428148
+step 21/50 t=600.0 ms=5425 vmhwm_kb=428148
+step 22/50 t=580.0 ms=5459 vmhwm_kb=428148
+step 23/50 t=560.0 ms=5444 vmhwm_kb=428148
+step 24/50 t=540.0 ms=5487 vmhwm_kb=428148
+step 25/50 t=520.0 ms=5381 vmhwm_kb=428148
+step 26/50 t=500.0 ms=5246 vmhwm_kb=428148
+step 27/50 t=480.0 ms=5196 vmhwm_kb=428148
+step 28/50 t=460.0 ms=5239 vmhwm_kb=428148
+step 29/50 t=440.0 ms=4716 vmhwm_kb=428148
+step 30/50 t=420.0 ms=5272 vmhwm_kb=428148
+step 31/50 t=400.0 ms=5292 vmhwm_kb=428148
+step 32/50 t=380.0 ms=5271 vmhwm_kb=428148
+step 33/50 t=360.0 ms=5337 vmhwm_kb=428148
+step 34/50 t=340.0 ms=5373 vmhwm_kb=428148
+step 35/50 t=320.0 ms=11653 vmhwm_kb=428148
+step 36/50 t=300.0 ms=13226 vmhwm_kb=428148
+step 37/50 t=280.0 ms=5617 vmhwm_kb=428148
+step 38/50 t=260.0 ms=7834 vmhwm_kb=428148
+step 39/50 t=240.0 ms=8965 vmhwm_kb=428148
+step 40/50 t=220.0 ms=6012 vmhwm_kb=428148
+step 41/50 t=200.0 ms=10383 vmhwm_kb=428148
+step 42/50 t=180.0 ms=9676 vmhwm_kb=428148
+step 43/50 t=160.0 ms=9557 vmhwm_kb=428148
+step 44/50 t=140.0 ms=9121 vmhwm_kb=428148
+step 45/50 t=120.0 ms=8787 vmhwm_kb=428148
+step 46/50 t=100.0 ms=8602 vmhwm_kb=428148
+step 47/50 t=80.0 ms=8496 vmhwm_kb=428148
+step 48/50 t=60.0 ms=8449 vmhwm_kb=428148
+step 49/50 t=40.0 ms=8304 vmhwm_kb=428148
+step 50/50 t=20.0 ms=8402 vmhwm_kb=428148
+sampling_ms=322764 step_median_ms=5381 guidance=7.0
+vae_post_ms=566 kv=(1,2048,1024)
+extract_ms=20792 query_ms=19855 query_calls=259 grid=252 vmhwm_kb=428148
+mc_ms=1778 verts=791330 tris=1582540 closed=0 volume=1.097587
+wrote pipe_out/mesh.glb and pipe_out/final_latents.npy total_ms=357747 vmhwm_end_kb=428148 pss_end_kb=257417
+/data/local/tmp/triposg-chain/pipe_out/mesh.glb: 1 file pulled, 0 skipped. 40.9 MB/s (37983244 bytes in 0.885s)
+/data/local/tmp/triposg-chain/pipe_out/final_latents.npy: 1 file pulled, 0 skipped. 28.6 MB/s (524416 bytes in 0.017s)
+pulled mesh.glb + final_latents.npy -> /home/lucas/Downloads/meta-ai-hackathon/ml/triposg-mobile/logs/spike/phone_pipeline_s50_d8/yuyyuw/
+grade (expect FAIL at reduced steps/depths until ablations land):
+  ~/anaconda3/envs/triposg-spike/bin/python -u ml/triposg-mobile/parity/run_phase1.py --candidate-dir /home/lucas/Downloads/meta-ai-hackathon/ml/triposg-mobile/logs/spike/phone_pipeline_s50_d8

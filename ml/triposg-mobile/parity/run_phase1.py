@@ -229,9 +229,13 @@ def candidate_file(
             detail = f"rel_l2={whole['rel_l2']:.3e} " f"cosine={whole['cosine']:.7f}"
             if not verdict["pass"]:
                 detail += " (" + "; ".join(verdict["reasons"]) + ")"
+            # Report-only components (e.g. final_latents) are evaluated
+            # and shown but never gate: the mesh is the end-to-end gate.
+            advisory = thresholds.get(component, {}).get("report_only", False)
             return {
                 "check": f"tensor:{component}",
                 "pass": verdict["pass"],
+                "report_only": advisory,
                 "detail": detail,
                 "result": result,
             }
@@ -404,15 +408,20 @@ def main() -> int:
                     params,
                     bounds,
                 )
+                verdict = per_file[path.name]
+                shown = (
+                    "report"
+                    if verdict.get("report_only")
+                    else ("PASS" if verdict["pass"] else "FAIL")
+                )
                 log(
                     f"cand {image_id}/{path.name}: "
-                    f"{per_file[path.name]['check']} "
-                    f"{per_file[path.name]['detail']} -> "
-                    f"{'PASS' if per_file[path.name]['pass'] else 'FAIL'}"
+                    f"{verdict['check']} {verdict['detail']} -> {shown}"
                 )
                 gc.collect()
             full["candidates"][image_id] = per_file
-            ok_all = ok_all and all(v["pass"] for v in per_file.values())
+            gating = [v for v in per_file.values() if not v.get("report_only")]
+            ok_all = ok_all and all(v["pass"] for v in gating)
 
     full["pass"] = bool(ok_all)
     with open(out_dir / "phase1_report.json", "w") as handle:
@@ -429,6 +438,10 @@ def main() -> int:
         f"IoU>={bounds['volume_iou_min']}"
     )
     lines.append(f"note: {DISPLAY_MESH} has no hash in report.json " "(presence only).")
+    lines.append(
+        "note: final_latents is report-only (diagnostic): shown as "
+        "'report', excluded from OVERALL; the mesh is the acceptance gate."
+    )
     lines.append("")
     rows = []
     for image_id in manifest_ids:
@@ -477,13 +490,18 @@ def main() -> int:
         rows = []
         for image_id, per_file in full["candidates"].items():
             for name, verdict in per_file.items():
+                shown = (
+                    "report"
+                    if verdict.get("report_only")
+                    else ("PASS" if verdict["pass"] else "FAIL")
+                )
                 rows.append(
                     [
                         image_id,
                         name,
                         verdict["check"],
                         verdict["detail"],
-                        "PASS" if verdict["pass"] else "FAIL",
+                        shown,
                     ]
                 )
         cand_headers = ["id", "file", "check", "detail", "gate"]

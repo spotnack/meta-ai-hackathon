@@ -144,8 +144,8 @@ Status of the [AI Pipeline Plan](docs/ai_pipeline_plan.md). Full details, source
 | Feasibility audit (Phase 0)                            | Done                                                   |
 | Golden reference set and parity harness (Phase 1)      | Done: 5 images, thresholds fixed, all baselines pass   |
 | DINOv2 image encoder on the phone                      | Done: runs and matches the GPU output                  |
-| Rectified-flow transformer (1.5B) on the phone         | In progress (Phase 2): runs on the NPU, 3.5 s per step |
-| VAE decoder and mesh extraction on the phone           | Not started                                            |
+| Rectified-flow transformer (1.5B) on the phone         | Done (Phase 2): runs on the NPU, ≈5 s per guided step  |
+| VAE decoder and mesh extraction on the phone           | Done (Phase 2): NPU decoder + C++ extraction           |
 | In-app on-device inference                             | Not started: the app ships an honest demo mode instead |
 
 **Phase 0: feasibility audit.** Every claim about TripoSG was checked against its source code, configs and licenses. The model is a 1.5B-parameter rectified-flow transformer over 2048 latent tokens, conditioned on a DINOv2 image encoder (224×224 input, 257 tokens), followed by an SDF VAE and mesh extraction. In FP32 the transformer weights alone are 5.36 GiB, so a full-precision pipeline cannot fit on a phone: the target is FP16 or INT8 weights, loaded one stage at a time. The background-removal model used by TripoSG, RMBG-1.4, has a non-commercial license, so it is skipped and inputs must be pre-cut images.
@@ -177,7 +177,11 @@ The eval set stays at 5 images. Its size only bounds how confident the parity ch
 | Match with the cloud GPU output   | cosine 1.0000001, max abs difference 6.0e-05 |
 | Thermal status                    | 0 before and after                           |
 
-**Transformer.** The FP16 single-step export (weights memory-mapped and cast one tensor at a time onto a meta-device model) passed its smoke test. The full export on a 15 GB laptop needed more than 9.8 GB of RAM and was stopped after 61 minutes before it could finish, so it moves to a cloud machine.
+**Full pipeline on the phone NPU (Phase 2).** TripoSG now runs end to end on the Xiaomi 15 Ultra's Hexagon NPU, from a golden's initial noise and image features to the final mesh. The [evaluation matrix](ml/triposg-mobile/eval/matrix.md) and [summary](ml/triposg-mobile/eval/summary.md) have the details.
+
+- **Export.** The 1.5B transformer is exported block by block on the laptop (23 batch-1 ONNX units under an 8 GiB memory cap). Qualcomm AI Hub compiles each unit offline for the Snapdragon 8 Elite, because compiling on the phone ran out of memory. Every layer runs on the NPU. The models total 5.6 GB.
+- **Decoding.** The VAE decoder is split in two NPU parts: a latent pass (0.3 s) and a point query (34 ms per 8,192 points). Octree extraction, marching tetrahedra and the GLB writer are portable C++. From the golden latents they reproduce the golden mesh at the noise floor (F-score 0.999, IoU 0.9985).
+- **Result.** The recommended setting is 50 steps, guidance 7.0 and extraction depth 8. It passes the mesh parity gate on all 5 goldens (Chamfer/diagonal ≤ 5.3e-3, F-score ≥ 0.93, IoU ≥ 0.956) in 4.2–7 minutes per mesh, with about 430 MB peak memory. A 25-step "fast" preset takes about 2.5 minutes. It passes on 2 of the 5 goldens; on the other 3 it gives the same object with small shape drift.
 
 **Demo build.** The Android preview build runs fully offline, with no backend:
 
@@ -194,11 +198,15 @@ The eval set stays at 5 images. Its size only bounds how confident the parity ch
 <details>
   <summary><h1 id="todo">To Do</h1></summary>
 
-Remaining phases of the [AI Pipeline Plan](docs/ai_pipeline_plan.md) (Phases 0 and 1 are done):
+Remaining phases of the [AI Pipeline Plan](docs/ai_pipeline_plan.md) (Phases 0, 1 and 2 are done):
 
-- **Phase 2, runtime evaluation:** finish the transformer on the phone NPU (one step already runs in 3.5 s and matches the GPU), port the VAE decoder and mesh extraction, and pick the number of steps, precision and guidance.
-- **Phase 3, native implementation:** port the VAE decoder and mesh extraction, add on-device preprocessing, and build the native module and the real image-to-3D adapter.
-- **Phase 4, integration and polish:** model download with checksums, licenses, cleanup of the demo build settings, and end-to-end testing in airplane mode.
+- **Phase 3, native implementation:**
+  - Package the pipeline as a local Expo module (shared C++ core, Kotlin bridge, ONNX Runtime with QNN).
+  - Add on-device background removal (u2net) and preprocessing.
+  - Decimate meshes for display.
+  - Add model download and sideloading with checksums.
+  - Build the real image-to-3D adapter.
+- **Phase 4, integration and polish:** swap the real adapter into the app, licenses, cleanup of the demo build settings, and end-to-end testing in airplane mode.
 
 </details>
 <!-- #endregion -->
