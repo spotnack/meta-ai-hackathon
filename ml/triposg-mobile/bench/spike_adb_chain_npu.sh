@@ -3,7 +3,8 @@
 # You run this in your own terminal (outside the sandbox).
 # Models are the AI Hub precompiled EPContext units
 # (logs/spike/aihub/<stem>/device/{model.onnx,model.bin} from
-# bench/aihub_compile.py): each unit dir is pushed to $REMOTE/<stem>/ so the
+# bench/aihub_compile.py, or AIHUB=.../aihub_w8a16 for the w8a16 variant):
+# each unit dir is pushed to $REMOTE/<stem>/ so the
 # EPContext node's ./model.bin reference resolves. Runs resident (all 23
 # sessions once) and stream (create/run/destroy per unit) with a cooldown
 # between them, sampling peak VmHWM externally; then gate both outputs with
@@ -18,7 +19,16 @@ AIHUB="${AIHUB:-ml/triposg-mobile/logs/spike/aihub}"
 B1="${B1:-ml/triposg-mobile/logs/spike/b1}"
 GOLDEN="${GOLDEN:-ml/triposg-mobile/reference/goldens_5/hjswed}"
 REMOTE="${REMOTE:-/data/local/tmp/triposg-chain}"
-OUTDIR="${OUTDIR:-ml/triposg-mobile/logs/spike/phone_chain_b1}"
+# AIHUB selects the compiled variant (fp32 default, or AIHUB=.../aihub_w8a16
+# for the quantized chain after aihub_compile.py --variant w8a16 with a
+# matching --remote-dir). A non-default AIHUB dir gets its own OUTDIR so
+# quantized parity outputs never overwrite the fp32 ones.
+OUTDIR_DEFAULT="ml/triposg-mobile/logs/spike/phone_chain_b1"
+case "$(basename "$AIHUB")" in
+  aihub) ;;
+  *) OUTDIR_DEFAULT="$OUTDIR_DEFAULT-$(basename "$AIHUB")" ;;
+esac
+OUTDIR="${OUTDIR:-$OUTDIR_DEFAULT}"
 if [ -z "${NDKOUT:-}" ]; then
   NDKOUT="ml/triposg-mobile/logs/spike-ndk/out-qnn129"
 fi

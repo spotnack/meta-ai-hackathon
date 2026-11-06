@@ -39,7 +39,9 @@ bool WriteGlb(const GlbMesh& mesh, const std::string& path) {
       "\"materials\":[{\"name\":\"triposg\",\"pbrMetallicRoughness\":{}}],"
       "\"accessors\":["
       "{\"bufferView\":0,\"componentType\":5126,\"count\":%zu,"
-      "\"type\":\"VEC3\",\"min\":[%g,%g,%g],\"max\":[%g,%g,%g]},"
+      // %.17g prints the float's exact (promoted double) value: the glTF
+      // validator requires accessor min/max to equal the data exactly.
+      "\"type\":\"VEC3\",\"min\":[%.17g,%.17g,%.17g],\"max\":[%.17g,%.17g,%.17g]},"
       "{\"bufferView\":1,\"componentType\":5126,\"count\":%zu,"
       "\"type\":\"VEC3\"},"
       "{\"bufferView\":2,\"componentType\":5125,\"count\":%zu,"

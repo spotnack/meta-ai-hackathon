@@ -14,6 +14,7 @@ import { FavouritesContext } from "@features/favourites/application/favourites.c
 import { SearchContext } from "@features/search/application/search.context";
 import { filterItemsBySearchKeyword } from "@features/search/domain/search-keyword.utils";
 import { useGeneratedShapesContext } from "@features/generated-shapes/application/generated-shapes.context";
+import { useConversionRunning } from "@features/image-to-3d/application/use-conversion-running.hook";
 import {
   generatedShapeToExploreItem,
   isItemOwnedByUser,
@@ -52,13 +53,20 @@ export const useExploreScreenViewModel = () => {
   const [renamingAsset, setRenamingAsset] = useState<ExploreItem | null>(null);
   const [isRenameSaving, setIsRenameSaving] = useState(false);
   const [renameError, setRenameError] = useState<string | null>(null);
+  // While a conversion runs, every card renders its static thumbnail so the
+  // NPU keeps its memory: no live GL views compete with the conversion.
+  const { conversionRunning, recheckConversionRunning } =
+    useConversionRunning();
 
   // Re-scan storage whenever Explore gains focus, so assets saved while it was in the background show up
   // without a restart. Silent: the current cards stay on screen while it scans.
+  // The conversion signal refreshes here too, so cards go live again after a
+  // conversion finishes while Explore is open.
   useFocusEffect(
     useCallback(() => {
       refresh({ showLoading: false });
-    }, [refresh]),
+      recheckConversionRunning();
+    }, [refresh, recheckConversionRunning]),
   );
 
   // The search adapter only covers library categories, so creations are filtered here by the same keyword rule.
@@ -160,6 +168,7 @@ export const useExploreScreenViewModel = () => {
   return {
     sections: categories,
     isLoading: isCategoryLoading,
+    conversionRunning,
     generatedAssets,
     isGeneratedAssetsLoading: isGeneratedShapesLoading,
     generatedAssetsError: generatedShapesError,

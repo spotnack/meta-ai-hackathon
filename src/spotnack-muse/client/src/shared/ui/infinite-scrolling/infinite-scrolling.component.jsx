@@ -26,6 +26,8 @@ export const InfiniteScrolling = ({
   extraData,
   showsHorizontalScrollIndicator,
   horizontal,
+  onViewableItemsChanged,
+  viewabilityConfig,
   snapToAlignment,
   scrollEventThrottle,
   decelerationRate,
@@ -85,6 +87,8 @@ export const InfiniteScrolling = ({
       extraData={extraData}
       showsHorizontalScrollIndicator={showsHorizontalScrollIndicator}
       horizontal={horizontal}
+      {...(onViewableItemsChanged && { onViewableItemsChanged })}
+      {...(viewabilityConfig && { viewabilityConfig })}
       {...(snapToAlignment && { snapToAlignment })}
       {...(scrollEventThrottle && { scrollEventThrottle })}
       {...(decelerationRate && { decelerationRate })}

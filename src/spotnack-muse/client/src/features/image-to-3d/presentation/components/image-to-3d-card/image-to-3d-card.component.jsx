@@ -11,6 +11,10 @@ import { BlinkingAnimation } from "@shared/ui/animation/blinking/blinking-animat
 
 // Domain:
 import { CONVERSION_STATUS } from "@features/image-to-3d/domain/image-to-3d-conversion.entity";
+import {
+  MODEL_STATUS,
+  formatBytes,
+} from "@features/image-to-3d/domain/model-management.port";
 import { DEMO_PICKER_COPY } from "@features/image-to-3d/infrastructure/demo-goldens.config";
 
 // Custom Styles:
@@ -73,6 +77,14 @@ export const ImageTo3dCardComponent = ({
   onCancelConversion,
   onViewResult,
   onOpenSettings,
+  modelState = null,
+  modelActionError = null,
+  modelsWorking = false,
+  needsMeteredConfirm = false,
+  onDownloadModels,
+  onPauseDownloadModels,
+  onVerifyModels,
+  onDeleteModels,
 }) => {
   const theme = useTheme();
   const percent = Math.round((progress?.fraction ?? 0) * 100);
@@ -80,6 +92,45 @@ export const ImageTo3dCardComponent = ({
   const hasImageSize = Boolean(selectedImage?.width && selectedImage?.height);
   // Demo builds: Change cycles the TripoSG goldens.
   const changeUsesDemo = canPickDemoImage && Boolean(onPickDemoImage);
+
+  // On-device model set, when the row is shown (null otherwise).
+  const modelStatus = modelState?.status ?? null;
+  const modelTotal = formatBytes(modelState?.totalBytes ?? 0);
+  const modelDone = formatBytes(modelState?.downloadedBytes ?? 0);
+  const modelPercent =
+    modelState?.totalBytes > 0
+      ? Math.round((modelState.downloadedBytes / modelState.totalBytes) * 100)
+      : 0;
+  const modelBusy = modelsWorking || isConverting;
+  const modelLine = (() => {
+    switch (modelStatus) {
+    case MODEL_STATUS.UNSUPPORTED:
+      return (
+        modelState.reason ?? "On-device 3D is not supported on this device."
+      );
+    case MODEL_STATUS.NOT_INSTALLED:
+      return `TripoSG models · ${modelTotal} · not downloaded${modelState.reason ? ` — ${modelState.reason}` : ""}`;
+    case MODEL_STATUS.DOWNLOADING:
+      return `Downloading models · ${modelDone} of ${modelTotal} · ${modelPercent}%`;
+    case MODEL_STATUS.PAUSED:
+      return `Download paused · ${modelDone} of ${modelTotal}`;
+    case MODEL_STATUS.VERIFYING:
+      return "Verifying models…";
+    case MODEL_STATUS.INSTALLED:
+      return `TripoSG models · ${modelTotal} · ready`;
+    case MODEL_STATUS.CORRUPT:
+      return `Models corrupt: ${modelState.reason ?? "verification failed"}`;
+    default:
+      return "";
+    }
+  })();
+  const modelIcon =
+    modelStatus === MODEL_STATUS.INSTALLED
+      ? "checkmark-circle"
+      : modelStatus === MODEL_STATUS.CORRUPT ||
+          modelStatus === MODEL_STATUS.UNSUPPORTED
+        ? "alert-circle-outline"
+        : "cube-outline";
 
   return (
     <Card>
@@ -185,6 +236,120 @@ export const ImageTo3dCardComponent = ({
             <MaterialCommunityIcons name="cube-outline" size={16} color={LINK_COLOR} />
             <LinkText>{DEMO_PICKER_COPY.demoLink}</LinkText>
           </InlineButton>
+        </StatusRow>
+      )}
+
+      {modelState && (
+        <StatusRow>
+          <Ionicons
+            name={modelIcon}
+            size={18}
+            color={
+              modelStatus === MODEL_STATUS.CORRUPT ||
+              modelStatus === MODEL_STATUS.UNSUPPORTED
+                ? ERROR_COLOR
+                : modelStatus === MODEL_STATUS.INSTALLED
+                  ? SUCCESS_COLOR
+                  : theme.text
+            }
+          />
+          <StatusText>{modelLine}</StatusText>
+          {modelStatus === MODEL_STATUS.VERIFYING ? (
+            <ActivityIndicator color={theme.text} size="small" />
+          ) : (
+            <>
+              {(modelStatus === MODEL_STATUS.NOT_INSTALLED ||
+                modelStatus === MODEL_STATUS.CORRUPT) && (
+                <InlineButton
+                  onPress={() => onDownloadModels?.()}
+                  disabled={modelBusy || !onDownloadModels}
+                  accessibilityRole="button"
+                  accessibilityLabel="Download TripoSG models"
+                >
+                  <Ionicons name="download-outline" size={16} color={LINK_COLOR} />
+                  <LinkText>Download</LinkText>
+                </InlineButton>
+              )}
+              {modelStatus === MODEL_STATUS.DOWNLOADING && (
+                <InlineButton
+                  onPress={() => onPauseDownloadModels?.()}
+                  disabled={!onPauseDownloadModels}
+                  accessibilityRole="button"
+                  accessibilityLabel="Pause model download"
+                >
+                  <Ionicons name="pause" size={16} color={LINK_COLOR} />
+                  <LinkText>Pause</LinkText>
+                </InlineButton>
+              )}
+              {modelStatus === MODEL_STATUS.PAUSED && (
+                <InlineButton
+                  onPress={() => onDownloadModels?.()}
+                  disabled={modelBusy || !onDownloadModels}
+                  accessibilityRole="button"
+                  accessibilityLabel="Resume model download"
+                >
+                  <Ionicons name="play" size={16} color={LINK_COLOR} />
+                  <LinkText>Resume</LinkText>
+                </InlineButton>
+              )}
+              {(modelStatus === MODEL_STATUS.PAUSED ||
+                modelStatus === MODEL_STATUS.INSTALLED ||
+                modelStatus === MODEL_STATUS.CORRUPT) && (
+                <InlineButton
+                  onPress={() => onDeleteModels?.()}
+                  disabled={modelBusy || !onDeleteModels}
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete TripoSG models"
+                >
+                  <Ionicons name="trash-outline" size={16} color={LINK_COLOR} />
+                  <LinkText>Delete</LinkText>
+                </InlineButton>
+              )}
+              {modelStatus === MODEL_STATUS.INSTALLED && (
+                <InlineButton
+                  onPress={() => onVerifyModels?.()}
+                  disabled={modelBusy || !onVerifyModels}
+                  accessibilityRole="button"
+                  accessibilityLabel="Verify TripoSG models"
+                >
+                  <Ionicons
+                    name="shield-checkmark-outline"
+                    size={16}
+                    color={LINK_COLOR}
+                  />
+                  <LinkText>Verify</LinkText>
+                </InlineButton>
+              )}
+            </>
+          )}
+        </StatusRow>
+      )}
+
+      {modelState?.status === MODEL_STATUS.DOWNLOADING && (
+        <ProgressTrack>
+          <ProgressFill style={{ width: `${modelPercent}%` }} />
+        </ProgressTrack>
+      )}
+
+      {needsMeteredConfirm && (
+        <StatusRow>
+          <Ionicons name="cellular-outline" size={18} color={theme.text} />
+          <StatusText>Models are ~7 GB. Download over mobile data?</StatusText>
+          <InlineButton
+            onPress={() => onDownloadModels?.({ allowMetered: true })}
+            disabled={modelBusy || !onDownloadModels}
+            accessibilityRole="button"
+            accessibilityLabel="Download models over mobile data"
+          >
+            <LinkText>Download anyway</LinkText>
+          </InlineButton>
+        </StatusRow>
+      )}
+
+      {modelActionError && (
+        <StatusRow style={cardStyles.errorRow} accessibilityRole="alert">
+          <Ionicons name="alert-circle-outline" size={18} color={ERROR_COLOR} />
+          <StatusText style={{ color: ERROR_COLOR }}>{modelActionError}</StatusText>
         </StatusRow>
       )}
 

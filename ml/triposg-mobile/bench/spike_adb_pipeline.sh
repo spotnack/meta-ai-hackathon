@@ -6,6 +6,10 @@
 # Env (defaults shown): SERIAL=<adb serial, required>, STEPS=20, D0=6,
 # D1=7, NDKOUT=logs/spike-ndk/out-qnn129, ORT_AAR override for the AAR,
 # RUNS is unused (single sampling run), OUTDIR=logs/spike/phone_pipeline.
+# REMOTE is the on-device models root (override for the w8a16 units, e.g.
+# REMOTE=/data/local/tmp/triposg-chain-w8a16 after pushing them with
+# spike_adb_chain_npu.sh AIHUB=.../aihub_w8a16 REMOTE=<same>).
+# AIHUB selects the compiled VAE units (always fp32).
 # The 23 transformer units are already on the phone from the chain runs;
 # only the new binary, the 2 VAE units and the inputs are pushed.
 set -eu
@@ -14,11 +18,16 @@ SERIAL="${SERIAL:?set SERIAL to the adb device serial}"
 STEPS="${STEPS:-20}"
 D0="${D0:-6}"
 D1="${D1:-7}"
-REMOTE=/data/local/tmp/triposg-chain
-AIHUB="$ROOT/logs/spike/aihub"
+REMOTE="${REMOTE:-/data/local/tmp/triposg-chain}"
+AIHUB="${AIHUB:-$ROOT/logs/spike/aihub}"
 B1="$ROOT/logs/spike/b1"
 NDKOUT="${NDKOUT:-$ROOT/logs/spike-ndk/out-qnn129}"
-OUTDIR="${OUTDIR:-$ROOT/logs/spike/phone_pipeline}"
+OUTDIR_DEFAULT="$ROOT/logs/spike/phone_pipeline"
+case "$(basename "$REMOTE")" in
+  triposg-chain) ;;
+  *) OUTDIR_DEFAULT="$OUTDIR_DEFAULT-$(basename "$REMOTE")" ;;
+esac
+OUTDIR="${OUTDIR:-$OUTDIR_DEFAULT}"
 # qnn-runtime 2.50 HTP libs already pushed to $REMOTE by spike_adb_chain_npu.sh
 # (the AI Hub bins need QAIRT 2.50, not the vendor libQnnHtp).
 BACKEND="$REMOTE/libQnnHtp.so"

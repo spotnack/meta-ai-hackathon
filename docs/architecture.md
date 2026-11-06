@@ -130,6 +130,13 @@ ml/
     ├── cpp/mcubes.{h,cpp}                         # Portable marching tetrahedra + outward normals.
     ├── cpp/glb_writer.{h,cpp}                     # Minimal valid glTF 2.0 binary writer.
     ├── cpp/test/                                  # Laptop host test (ORT CPU backend, grades vs goldens).
+    ├── cpp/CMakeLists.txt                         # triposg_core static lib (reused by the Expo module).
+    ├── cpp/test/test_preprocess.cpp               # Front-end host test (u2net CPU + prepare + pixel_values).
+    ├── cpp/test/prep_preprocess_inputs.py         # PNG sources + golden prepared -> .npy fixtures.
+    ├── cpp/test/make_preprocess_refs.py           # Bit-exact stage refs via real load_image + BitImageProcessor.
+    ├── cpp/test/check_preprocess.py               # Grades cutout/prepared/pixel_values vs goldens.
+    ├── bench/make_model_manifest.py               # Hashes all model files -> models_manifest.json.
+    ├── bench/sideload_models.sh                   # adb-pushes models + manifest to the app dir.
     └── logs/phase2/                               # Phase 2 parity reports + phone/AI Hub logs (git-ignored).
 src/
 └── spotnack-muse/                                 # Yarn workspace root.
@@ -160,6 +167,7 @@ src/
     │   │   │   ├── SignInScreen.tsx               # Route shim: sign-in feature screen.
     │   │   │   ├── SignUpScreen.tsx               # Route shim: sign-up feature screen.
     │   │   │   └── Stage3dScreen.tsx              # Full-screen 3D stage viewer.
+    │   │   │   (dev-triposg.jsx deleted in part B; adb trigger is TripoSGDebugReceiver in the module).
     │   │   ├── config/
     │   │   │   └── api.js                         # Resolves the API base URL from the environment.
     │   │   ├── features/
@@ -201,6 +209,9 @@ src/
     │   │   │   │       │   ├── explore-card/
     │   │   │   │       │   │   ├── explore-card.component.jsx         # The one card for library items and the user's creations: 3D viewer or placeholder, bookmark, optional options menu.
     │   │   │   │       │   │   ├── explore-card.component.styles.jsx  # Styled components for the explore card.
+    │   │   │   │       │   │   ├── gl-availability.js                 # Non-fatal guard for expo-gl context failures (global-handler filter + subscriber notify).
+    │   │   │   │       │   │   ├── gl-preview-policy.js               # Pure live-vs-static card policy + visible-id slicing.
+    │   │   │   │       │   │   ├── gl-view-lease.js                   # App-wide cap (2) on concurrent live GL views + useGlViewLease hook.
     │   │   │   │       │   │   ├── glb-model-viewer.component.jsx     # Three.js Canvas.
     │   │   │   │       │   │   └── model-placeholder.component.jsx    # Stand-in for a model that can't be rendered (card and 3D stage).
     │   │   │   │       │   ├── explore-section-list/
@@ -249,19 +260,28 @@ src/
     │   │   │   │       └── home.screen.view-model.ts    # Exposes the image-to-3D use case and its navigation.
     │   │   │   ├── image-to-3d/
     │   │   │   │   ├── application/
-    │   │   │   │   │   └── use-image-to-3d-conversion.hook.js      # Use case: pick an image, convert it, save it as a generated shape.
+    │   │   │   │   │   ├── use-image-to-3d-conversion.hook.js      # Use case: pick an image, convert it, save it as a generated shape (ondevice port swap + persisted-job resume, no background cancel).
+    │   │   │   │   │   ├── use-conversion-running.hook.js + .test.js  # Shared "a conversion is running" signal from the persisted job record (drives Explore static thumbnails).
+    │   │   │   │   │   ├── persisted-job-plan.js + .test.js        # Pure resume/complete matrix over the persisted job record.
+    │   │   │   │   │   └── use-model-management.hook.js            # Owns the TripoSG model set (download/pause/verify/delete) for the card row.
     │   │   │   │   ├── domain/
-    │   │   │   │   │   ├── image-to-3d-conversion.entity.js        # Conversion states and the photo permission error.
-    │   │   │   │   │   └── image-to-3d.port.js                     # Ports for the conversion pipeline and the image source.
+    │   │   │   │   │   ├── image-to-3d-conversion.entity.js        # Conversion states, photo permission + cancelled + unavailable errors.
+    │   │   │   │   │   ├── image-to-3d.port.js                     # Ports for the conversion pipeline and the image source.
+    │   │   │   │   │   └── model-management.port.js                # Model set states, byte formatting, download/space/sideload errors.
     │   │   │   │   ├── infrastructure/
     │   │   │   │   │   ├── image-library.adapter.js                # Image source backed by the device photo library (expo-image-picker).
-    │   │   │   │   │   ├── placeholder-image-to-3d.adapter.js      # Simulated pipeline (no inference). Swap for the real AI adapter.
+    │   │   │   │   │   ├── placeholder-image-to-3d.adapter.js      # Simulated pipeline (no inference). Fallback when on-device is unavailable.
+    │   │   │   │   │   ├── triposg-image-to-3d.adapter.js          # Real pipeline over @spotnack/triposg (events→port promise, label map, GLB copy, job attach + record clearing).
+    │   │   │   │   │   ├── triposg-image-to-3d.adapter.test.js     # Progress/cancel/error/attach/copy mapping against a mocked native module.
+    │   │   │   │   │   ├── model-management.adapter.js             # Derived model state + download/verify/delete over the native module.
+    │   │   │   │   │   ├── model-management.adapter.test.js        # State machine (7 states, metered/space/sideload, corrupt retry).
+    │   │   │   │   │   └── triposg-models.manifest.js              # GENERATED manifest copy (make_model_manifest.py --js-out).
     │   │   │   │   │   ├── demo-goldens.config.js                  # Demo mode: golden ids, URLs, bundled mesh modules, honest labels.
     │   │   │   │   │   ├── demo-goldens-image-source.adapter.js    # Demo source: round-robin over the 5 golden inputs (HTTP).
     │   │   │   │   │   ├── demo-goldens-image-to-3d.adapter.js     # Demo pipeline: copies the matching bundled display mesh.
     │   │   │   │   │   └── demo-goldens/<id>/mesh.display.glb      # 5 bundled display meshes (~80k faces, ~1.6 MB each).
     │   │   │   │   └── presentation/components/
-    │   │   │   │       └── image-to-3d-card/                       # Home card: photo picker, preview, progress and "Convert to 3D".
+    │   │   │   │       └── image-to-3d-card/                       # Home card: photo picker, preview, progress, model-status row, "Convert to 3D".
     │   │   │   ├── profile/
     │   │   │   │   └── presentation/screen/
     │   │   │   │       ├── profile.screen.tsx         # Profile screen: displays user info and sign-out button.
@@ -298,9 +318,28 @@ src/
     │   │   │           └── screen-container.tsx   # Full-screen safe-area wrapper with theme background.
     │   │   └── global.css                         # Global CSS (web target).
     │   ├── .gitignore                             # Git ignore for the client workspace.
+    │   ├── modules/triposg/                       # Local Expo module: on-device TripoSG (Phase 3A + part B integration).
+    │   │   ├── package.json + expo-module.config.json  # @spotnack/triposg (portal dep), autolink config.
+    │   │   ├── app.plugin.js                      # Config plugin (in app.json): QNN jniLibs excludes (V79 + system only).
+    │   │   ├── index.js                           # JS API: status/verify/convert/cancel/release + download/preflight/progress/delete + events.
+    │   │   ├── THIRD_PARTY_LICENSES.md            # ORT, qnn-runtime, meshoptimizer, u2net, TripoSG, DINOv2.
+    │   │   ├── android/build.gradle + CMakeLists.txt + src/main/AndroidManifest.xml  # ORT 1.29/QNN 2.50 from Maven, AAR extract for CMake, debug receiver.
+    │   │   ├── android/.../TripoSGModule.kt       # Expo module: preflight, decode, job queue, progress events, download fns, idle-only trim release, job record (getPendingJob/clearJob).
+    │   │   ├── android/.../TripoSGService.kt      # dataSync foreground service: notification + Cancel, wake lock, 1 Hz repaint, self-stop.
+    │   │   ├── android/.../TripoSGJobs.kt         # Persisted job record (filesDir/triposg/job.json) + worker-alive flag.
+    │   │   ├── android/.../TripoSGDownload.kt     # Resumable Range downloader (part files, sha256, manifest write).
+    │   │   ├── android/.../TripoSGDebugReceiver.kt + TripoSGDebug  # Debuggable-only adb trigger (no UI).
+    │   │   ├── android/.../cpp/jni_bridge.cpp     # JNI: engine singleton, progress callbacks, verify, debug entry.
+    │   │   ├── cpp/pipeline.{h,cpp}               # Engine: sampler + VAE + extract + GLB orchestration.
+    │   │   ├── cpp/preprocess.{h,cpp}             # u2net bg removal + prepare_image + DINOv2 preprocessing.
+    │   │   ├── cpp/decimate.{h,cpp}               # meshoptimizer display decimation (default 100k tris).
+    │   │   ├── cpp/models.{h,cpp}                 # Manifest parse + size/sha256 verification.
+    │   │   ├── cpp/third_party/meshoptimizer/     # Vendored simplifier (v0.24) + fetch README.
+    │   │   └── ios/TripoSGModule.swift + TripoSG.podspec  # iOS stub: reports unsupported.
     │   ├── .env.example                           # Example EXPO_PUBLIC_* vars (image-to-3D demo mode).
     │   ├── AGENTS.md                              # Agent instructions for this workspace.
     │   ├── app.json                               # Expo app config: name, scheme, icons, splash, and plugins.
+    │   ├── app.config.js                          # Local variant: APP_VARIANT=ondevice -> com.spotnackmuse.ondevice.
     │   ├── expo-env.d.ts                          # Expo TypeScript environment declarations.
     │   ├── jest.config.js                         # Jest (jest-expo) config for client unit tests, with the tsconfig path aliases.
     │   ├── metro.config.js                        # Metro bundler config: .glb assets, process-emit-warning polyfill.

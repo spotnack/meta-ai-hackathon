@@ -10,6 +10,8 @@ the repo root (not under `client/`) so Metro never watches weights or logs.
 - `parity/` — parity harness + thresholds, set before optimizing (Phase 1).
 - `conversion/` — per-runtime conversion scripts (Phase 2).
 - `bench/` + `logs/` — on-device benchmark scripts and raw logs (Phase 2).
+- `cpp/` — portable extraction/marching/GLB core + host tests (Phases 2–3;
+  the Expo module builds this same copy).
 
 Rules: no file over 10 MB in git; weights, tensors, and large logs stay
 git-ignored. Conversion deps get pinned in `src/spotnack-muse/environment.yml`.
@@ -89,3 +91,118 @@ SERIAL=<serial> STEPS=50 D0=6 D1=8 sh ml/triposg-mobile/bench/spike_adb_pipeline
 
 Results and the recommended configuration live in `eval/summary.md`,
 per-component evidence in `eval/matrix.md`, raw logs in `logs/phase2/`.
+
+### w8a16 DiT (NPU-memory follow-up)
+
+The FP32 chain pins ~9 GB of unswappable DMA-BUF and HyperOS kills the
+app for it (see `docs/ai_pipeline.md` "NPU memory"). The quantized chain
+(int8 weights / uint16 activations, VAE stays FP32) targets ≲ 3 GB with
+the same 50-step mesh gate. Capture is the only heavy laptop job
+(~0.5–1.5 h per golden); quantization + compile are light:
+
+```sh
+systemd-run --user --scope -p MemoryMax=9G -p MemorySwapMax=0 ~/anaconda3/envs/triposg-spike/bin/python -u ml/triposg-mobile/bench/capture_calib.py
+~/anaconda3/envs/triposg-spike/bin/python -u ml/triposg-mobile/bench/quantize_units.py
+~/anaconda3/envs/triposg-spike/bin/python -m pytest ml/triposg-mobile/bench/test_aihub_compile.py
+~/anaconda3/envs/triposg-spike/bin/python -u ml/triposg-mobile/bench/aihub_compile.py --variant w8a16
+```
+
+Phone (needs the QAI_HUB token for the compile; the rest is adb):
+
+```sh
+AIHUB=ml/triposg-mobile/logs/spike/aihub_w8a16 REMOTE=/data/local/tmp/triposg-chain-w8a16 sh ml/triposg-mobile/bench/spike_adb_chain_npu.sh
+SERIAL=<serial> REMOTE=/data/local/tmp/triposg-chain-w8a16 sh ml/triposg-mobile/bench/spike_adb_dmabuf.sh
+SERIAL=<serial> STEPS=50 D0=6 D1=8 REMOTE=/data/local/tmp/triposg-chain-w8a16 sh ml/triposg-mobile/bench/spike_adb_pipeline.sh
+```
+
+Release as model version `v2-w8a16-50step` (no app code change: the native
+side discovers version dirs by manifest, the JS version is manifest data):
+
+```sh
+~/anaconda3/envs/triposg-spike/bin/python ml/triposg-mobile/bench/make_model_manifest.py --version v2-w8a16-50step --aihub-manifest ml/triposg-mobile/logs/spike/aihub_w8a16/manifest_w8a16.json --out ml/triposg-mobile/logs/spike/models_manifest_w8a16.json --js-out src/spotnack-muse/client/src/features/image-to-3d/infrastructure/triposg-models.manifest.js
+SERIAL=<serial> VERSION=v2-w8a16-50step AIHUB=ml/triposg-mobile/logs/spike/aihub_w8a16 MANIFEST=ml/triposg-mobile/logs/spike/models_manifest_w8a16.json sh ml/triposg-mobile/bench/sideload_models.sh
+```
+
+### Merged FP32 chain (shipping, `v2-fp32-merged-50step`)
+
+w8a16 concluded not worth it (saves only ~0.5 GB: the runlist grows to
+133 MB and spill-fill to ~210 MB per block; 15% slower plus quality
+risk — see `docs/ai_pipeline.md` "One merged NPU session"). FP16 does
+not help either (QNN still pins 245 MB of weights per block). Instead,
+one FP32 session shares a single spill-fill buffer: 9.0 GB → **7.14 GB**
+peak DMA-BUF, row pass 2.07 s → ~1.6 s, bit-identical output. Recipe
+(`aihub_compile.py` fp32 output → merge → manifest → sideload):
+
+```sh
+~/anaconda3/envs/triposg-spike/bin/python -u ml/triposg-mobile/bench/aihub_compile.py
+~/anaconda3/envs/triposg-spike/bin/python -u ml/triposg-mobile/bench/merge_chain.py ml/triposg-mobile/logs/spike/aihub ml/triposg-mobile/logs/spike/merged/fp32
+~/anaconda3/envs/triposg-spike/bin/python -m pytest ml/triposg-mobile/bench/test_make_model_manifest.py
+~/anaconda3/envs/triposg-spike/bin/python ml/triposg-mobile/bench/make_model_manifest.py --version v2-fp32-merged-50step --merged-dir ml/triposg-mobile/logs/spike/merged/fp32 --out ml/triposg-mobile/logs/spike/models_manifest_merged.json --js-out src/spotnack-muse/client/src/features/image-to-3d/infrastructure/triposg-models.manifest.js
+SERIAL=<serial> VERSION=v2-fp32-merged-50step MERGED=ml/triposg-mobile/logs/spike/merged/fp32 MANIFEST=ml/triposg-mobile/logs/spike/models_manifest_merged.json sh ml/triposg-mobile/bench/sideload_models.sh
+```
+
+The app runs merged mode automatically when the version dir holds
+`dit_chain.onnx` (v1 dirs keep the 23-session fallback, no rebuild
+needed to go back).
+
+## Reproduce Phase 3A (from the repo root, you run this)
+
+Front-end parity (u2net CPU + prepare_image + DINOv2 preprocessing vs
+the 5 goldens; light — 176 MB u2net + laptop ORT):
+
+```sh
+~/anaconda3/envs/triposg-spike/bin/python ml/triposg-mobile/cpp/test/prep_preprocess_inputs.py
+~/anaconda3/envs/triposg-spike/bin/python ml/triposg-mobile/cpp/test/make_preprocess_refs.py
+cmake -S ml/triposg-mobile/cpp/test -B /tmp/pre-test-build && cmake --build /tmp/pre-test-build -j4 --target test_preprocess
+/tmp/pre-test-build/test_preprocess ml/triposg-mobile/cpp/test/data ml/triposg-mobile/pretrained_weights/u2net/u2net.onnx /tmp/pre-test-out
+~/anaconda3/envs/triposg-spike/bin/python ml/triposg-mobile/cpp/test/check_preprocess.py /tmp/pre-test-out
+```
+
+(`make_preprocess_refs.py` runs TripoSG's real `load_image` + the
+transformers `BitImageProcessor` on CPU to build the bit-exact stage
+references under `cpp/test/data/refs/`; the checker grades the C++
+outputs against those plus the goldens.)
+
+Model manifest + sideload (~7 GB hashed, then pushed over adb).
+`--js-out` also emits the GENERATED manifest copy the app bundles
+(`triposg-models.manifest.js`, 7,696 bytes for the 52 files) — rerun it
+whenever the weights change:
+
+```sh
+~/anaconda3/envs/triposg-spike/bin/python ml/triposg-mobile/bench/make_model_manifest.py \
+  --js-out src/spotnack-muse/client/src/features/image-to-3d/infrastructure/triposg-models.manifest.js
+SERIAL=<serial> sh ml/triposg-mobile/bench/sideload_models.sh
+```
+
+In-app download instead of sideload: serve the model files over HTTP as
+`<base>/<version>/<path>` (the manifest's relative paths, e.g.
+`<base>/v1-fp32-50step/head/model.bin`) with Range support, and set
+`EXPO_PUBLIC_TRIPOSG_MODEL_BASE_URL=<base>` (see `client/.env.example`).
+The app downloads with per-file resume + SHA-256 into the same external
+dir the sideload uses, so both flows are interchangeable.
+
+Sideload notes (measured): the script runs from the repo root and fixes
+permissions on-device (`chmod -R a+rX .../files/triposg`), without which
+the app cannot read its own external dir. `run-as` cannot inspect
+`/storage/emulated` (no app mount namespace) — verify external-dir
+access from the app itself: `getStatus` logs the root listing and the
+size-check result under logcat tag `TripoSG`.
+
+App build (needs the vendored meshoptimizer first — see
+`client/modules/triposg/cpp/third_party/meshoptimizer/README.md`):
+
+```sh
+cd src/spotnack-muse/client && yarn install
+adb push <photo.png> /sdcard/Download/triposg-test.png
+APP_VARIANT=ondevice npx expo prebuild -p android
+APP_VARIANT=ondevice npx expo run:android --variant release
+```
+
+(`APP_VARIANT=ondevice` switches the package to
+`com.spotnackmuse.ondevice` via `app.config.js`, so the test build
+installs next to the preview build without uninstalling it. Without the
+env var the config is exactly `app.json`.)
+
+Then open the `/dev-triposg` route and read `adb logcat` for the
+`[dev-triposg]` lines. Lint/typecheck the JS: `yarn lint` and
+`npx tsc --noEmit` from `client/`.

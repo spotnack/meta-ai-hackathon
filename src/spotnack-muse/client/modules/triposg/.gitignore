@@ -1,0 +1,3 @@
+# Native build outputs (Gradle/CMake), never committed.
+android/build/
+android/.cxx/

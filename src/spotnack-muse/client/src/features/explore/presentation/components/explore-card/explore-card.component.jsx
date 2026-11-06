@@ -27,6 +27,11 @@ import {
 // Custom Components:
 import { GlbModelViewer } from "./glb-model-viewer.component";
 import { ModelPlaceholderComponent } from "./model-placeholder.component";
+import { useGlViewLease } from "./gl-view-lease";
+import {
+  LIVE_PREVIEW,
+  resolveCardPreview,
+} from "./gl-preview-policy";
 
 // Feature Components:
 import { FavouritesCardButton } from "@features/favourites/presentation/components/favourites-card-button/favourites-card-button.component";
@@ -58,7 +63,9 @@ const toNativeMenuActions = (menuActions) =>
 
 /*
 The one card for every explorable item, from the library and the user's own creations alike.
-- Preview: a renderable model (item.thumbnail) spins in the 3D viewer; otherwise a placeholder shows item.photos[0].
+- Preview: a renderable model (item.thumbnail) spins in the 3D viewer while the card holds a live-GL
+  lease (at most 2 cards app-wide); otherwise a static placeholder shows item.photos[0]. While a
+  conversion runs (`previewOnly`) every card stays static so the NPU keeps its memory.
 - A single tap opens pageToNavigate; a double tap (or the bookmark) toggles the favourite.
 - An optional item.createdAt is shown under the name.
 - `menuActions` ([{ id, title, icon, destructive, onPress }]) adds an options menu in the upper-right corner.
@@ -71,6 +78,8 @@ export const ExploreCardComponent = ({
   style,
   menuActions = [],
   isBusy = false,
+  glVisible = true,
+  previewOnly = false,
 }) => {
   const router = useRouter();
   const colorScheme = useColorScheme();
@@ -79,10 +88,20 @@ export const ExploreCardComponent = ({
 
   const isFavourite = item ? favourites.find((r) => r.id === item.id) : null;
   const modelUri = item?.thumbnail?.[0];
+  // A live canvas mounts only for a visible card that holds a lease; every
+  // other state (converting, off-screen, out of leases) renders the static
+  // photo placeholder instead of attempting GL.
+  const leaseGranted = useGlViewLease(
+    item?.id,
+    glVisible && !previewOnly && Boolean(modelUri),
+  );
+  const preview = resolveCardPreview({ modelUri, previewOnly, leaseGranted });
 
+  // Preload only while the card wants a live view: a preloaded multi-MB
+  // GLB sits in JS memory, which is exactly what a conversion is short of.
   useEffect(() => {
-    if (modelUri) useGLTF.preload(modelUri);
-  }, [modelUri]);
+    if (modelUri && glVisible && !previewOnly) useGLTF.preload(modelUri);
+  }, [modelUri, glVisible, previewOnly]);
 
   const navigateToItem = () => {
     if (!item) return;
@@ -134,8 +153,8 @@ export const ExploreCardComponent = ({
             accessibilityRole="button"
             accessibilityLabel={`Open ${name}`}
           >
-            {modelUri ? (
-              <GlbModelViewer uri={modelUri} />
+            {preview === LIVE_PREVIEW ? (
+              <GlbModelViewer uri={modelUri} photoUri={photos?.[0]} />
             ) : (
               <ModelPlaceholderComponent photoUri={photos?.[0]} />
             )}

@@ -53,12 +53,17 @@ export const Stage3dScreen = () => {
         </HeaderRow>
         <CanvasContainer>
           {modelUri ? (
+            // Opened by explicit tap, so this viewer always attempts live GL;
+            // if the context cannot be created it shows the photo fallback
+            // with a message instead of crashing.
             <GlbModelViewer
               uri={modelUri}
               canvas={stageStyles.canvas}
               scaleFactor={0.6}
               background={stageStyles.background}
               showShadows
+              photoUri={item?.photos?.[0] ?? null}
+              fallbackCaption="3D preview isn't available right now. Your model is safe — try opening it again."
             />
           ) : (
             // The user's own creations have no 3D model until the AI pipeline generates one.

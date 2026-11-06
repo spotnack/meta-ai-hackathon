@@ -139,14 +139,15 @@ However, the GitHub repository recommends a CUDA-enabled GPU with at least `8GB 
 
 Status of the [AI Pipeline Plan](docs/ai_pipeline_plan.md). Full details, sources and logs are in [docs/ai_pipeline.md](docs/ai_pipeline.md).
 
-| Pipeline stage                                         | Status                                                 |
-| ------------------------------------------------------ | ------------------------------------------------------ |
-| Feasibility audit (Phase 0)                            | Done                                                   |
-| Golden reference set and parity harness (Phase 1)      | Done: 5 images, thresholds fixed, all baselines pass   |
-| DINOv2 image encoder on the phone                      | Done: runs and matches the GPU output                  |
-| Rectified-flow transformer (1.5B) on the phone         | Done (Phase 2): runs on the NPU, ≈5 s per guided step  |
-| VAE decoder and mesh extraction on the phone           | Done (Phase 2): NPU decoder + C++ extraction           |
-| In-app on-device inference                             | Not started: the app ships an honest demo mode instead |
+| Pipeline stage                                    | Status                                                 |
+| ------------------------------------------------- | ------------------------------------------------------ |
+| Feasibility audit (Phase 0)                       | Done                                                   |
+| Golden reference set and parity harness (Phase 1) | Done: 5 images, thresholds fixed, all baselines pass   |
+| DINOv2 image encoder on the phone                 | Done: runs and matches the GPU output                  |
+| Rectified-flow transformer (1.5B) on the phone    | Done (Phase 2): runs on the NPU, ≈5 s per guided step  |
+| VAE decoder and mesh extraction on the phone      | Done (Phase 2): NPU decoder + C++ extraction           |
+| In-app on-device inference                        | Done (Phase 3): photo to mesh in the app, ≈3 min       |
+| NPU memory footprint                              | Done (Phase 3): one merged NPU session, no app kills   |
 
 **Phase 0: feasibility audit.** Every claim about TripoSG was checked against its source code, configs and licenses. The model is a 1.5B-parameter rectified-flow transformer over 2048 latent tokens, conditioned on a DINOv2 image encoder (224×224 input, 257 tokens), followed by an SDF VAE and mesh extraction. In FP32 the transformer weights alone are 5.36 GiB, so a full-precision pipeline cannot fit on a phone: the target is FP16 or INT8 weights, loaded one stage at a time. The background-removal model used by TripoSG, RMBG-1.4, has a non-commercial license, so it is skipped and inputs must be pre-cut images.
 
@@ -159,10 +160,10 @@ Status of the [AI Pipeline Plan](docs/ai_pipeline_plan.md). Full details, source
 
 The acceptance thresholds were fixed before any optimization and are justified in [THRESHOLDS.md](ml/triposg-mobile/parity/THRESHOLDS.md):
 
-| Stage | Pass if |
-| --- | --- |
-| One transformer step | cosine ≥ 0.999 and relative L2 ≤ 1e-2 |
-| Mesh | Chamfer/diagonal ≤ 0.01, F-score ≥ 0.9 and IoU ≥ 0.95 |
+| Stage                | Pass if                                               |
+| -------------------- | ----------------------------------------------------- |
+| One transformer step | cosine ≥ 0.999 and relative L2 ≤ 1e-2                 |
+| Mesh                 | Chamfer/diagonal ≤ 0.01, F-score ≥ 0.9 and IoU ≥ 0.95 |
 
 They were calibrated on two noise baselines for each of the 5 images, the decimated display mesh against the full mesh, and the same mesh sampled with two seeds. Every baseline passes: Chamfer/diagonal 3.5–4.6e-3, F-score 0.97–1.00, IoU ≥ 0.998.
 
@@ -183,11 +184,30 @@ The eval set stays at 5 images. Its size only bounds how confident the parity ch
 - **Decoding.** The VAE decoder is split in two NPU parts: a latent pass (0.3 s) and a point query (34 ms per 8,192 points). Octree extraction, marching tetrahedra and the GLB writer are portable C++. From the golden latents they reproduce the golden mesh at the noise floor (F-score 0.999, IoU 0.9985).
 - **Result.** The recommended setting is 50 steps, guidance 7.0 and extraction depth 8. It passes the mesh parity gate on all 5 goldens (Chamfer/diagonal ≤ 5.3e-3, F-score ≥ 0.93, IoU ≥ 0.956) in 4.2–7 minutes per mesh, with about 430 MB peak memory. A 25-step "fast" preset takes about 2.5 minutes. It passes on 2 of the 5 goldens; on the other 3 it gives the same object with small shape drift.
 
-**Demo build.** The Android preview build runs fully offline, with no backend:
+**On-device inference in the app (Phase 3).** The `on-device-pipeline` test build (`com.spotnackmuse.ondevice`) turns a gallery photo into a 3D mesh entirely on the Xiaomi 15 Ultra, with no network:
 
-- **Login:** a "Continue as demo guest" button creates a local session, since the Express and Cognito backend is not deployed.
-- **Image to 3D:** "Choose a demo image" cycles through the 5 golden inputs, and Explore and Stage show the matching TripoSG meshes, simplified to about 80k faces. Every demo mesh is labeled "Generated by TripoSG on a cloud GPU (simplified for display). On-device generation in progress."
-- **Release-build fixes:** R8 minification is turned off, because it broke the reflection-based `expo-gl` view. Bundled images are copied out of the Android drawable resources before use.
+- **Native module.** A local Expo module (`src/spotnack-muse/client/modules/triposg`) wraps the shared C++ core in Kotlin and runs ONNX Runtime 1.29 with the QNN NPU backend. The steps are: u2net background removal, an exact port of TripoSG's preprocessing (all 59 primitives match the Python reference bit for bit), DINOv2, 50 guided transformer steps, the VAE decoder, mesh extraction, and a 100k-triangle display mesh (meshoptimizer).
+- **Speed.** A full conversion takes about 191 s: models load in ≈20 s, each guided step takes ≈3 s, and decoding plus extraction takes ≈25 s. The display mesh matches the full mesh (F-score 0.986, IoU 0.998) and passes the Khronos glTF validator with 0 errors.
+- **Lifecycle.** The conversion runs in an Android foreground service, with a progress notification and a Cancel action. The user can switch tabs or apps while it runs. Jobs are persisted, so a finished result is saved when the app comes back, and an interrupted run asks the user to retry. Cancel and failure leave no files behind.
+- **Memory.** On the phone, the NPU sessions pin about 9.8 GB of shared memory that cannot be swapped. During a run, Android closes other apps, and HyperOS may stop the app for exceeding its limit. The module now releases every NPU session as soon as a run ends, frees the transformer before decoding, drops model file pages after loading, and no longer keeps busy-waiting CPU thread pools (one run went from 317 s to 194 s). Explore shows static thumbnails during a run, and a failed 3D view falls back to a placeholder instead of crashing. The merged-session fix below solves the rest.
+
+**NPU memory fix (Phase 3).** The phone froze during a conversion, and Android closed other apps (Spotify, the screen recorder), because each of the 23 NPU sessions pinned its own scratch buffer, for 1.8 GB in total. The 23 compiled units now load as one merged model (`ml/triposg-mobile/bench/merge_chain.py`), so the NPU runtime shares a single scratch buffer. The VAE decoder is loaded only after sampling ends. Results on the Xiaomi 15 Ultra:
+
+| Metric                          | 23 sessions (before) | One merged session                         |
+| ------------------------------- | -------------------- | ------------------------------------------ |
+| Pinned NPU memory, transformer  | ≈9.0 GB              | 7.1 GB                                     |
+| Lowest free memory during a run | ≈1.1 GB              | ≈2.0 GB, ≈2.6 GB while sampling            |
+| Background apps killed per run  | ≈100–120             | 0 (Spotify and YouTube Music kept running) |
+| One transformer pass            | 2.07 s               | 1.5–1.7 s                                  |
+| Full conversion in the app      | ≈191 s               | ≈176 s                                     |
+| Output                          | baseline             | bit-identical                              |
+
+Tabs and other apps stay responsive during a run, and the conversion keeps going in the background. Two alternatives were measured and dropped:
+
+- **8-bit weights (w8a16):** they shrink the weights, but the NPU's runlist and scratch buffers grow, for a net saving of only ≈0.5 GB. They were also 15% slower and added error.
+- **FP16 weights:** the compiled models still store FP32-sized weights, so there is no saving.
+
+**Demo build.** The Android preview build is the same from phase 0, and will be updated in phase 4.
 
 </details>
 <!-- #endregion -->
@@ -198,15 +218,14 @@ The eval set stays at 5 images. Its size only bounds how confident the parity ch
 <details>
   <summary><h1 id="todo">To Do</h1></summary>
 
-Remaining phases of the [AI Pipeline Plan](docs/ai_pipeline_plan.md) (Phases 0, 1 and 2 are done):
+Remaining work on the [AI Pipeline Plan](docs/ai_pipeline_plan.md) (Phases 0–3 are done):
 
-- **Phase 3, native implementation:**
-  - Package the pipeline as a local Expo module (shared C++ core, Kotlin bridge, ONNX Runtime with QNN).
-  - Add on-device background removal (u2net) and preprocessing.
-  - Decimate meshes for display.
-  - Add model download and sideloading with checksums.
-  - Build the real image-to-3D adapter.
-- **Phase 4, integration and polish:** swap the real adapter into the app, licenses, cleanup of the demo build settings, and end-to-end testing in airplane mode.
+- **Phase 4, integration and polish:**
+  - Host the model files for the in-app download (≈6.9 GB; the hosting choice is open).
+  - Write license documentation, including the Qualcomm AI Hub Model License terms for the bundled QNN runtime.
+  - Clean up the demo build settings.
+  - Run end-to-end tests in airplane mode.
+  - Write final benchmarks and documentation, and the `assets/ai_pipeline.png` pipeline diagram.
 
 </details>
 <!-- #endregion -->

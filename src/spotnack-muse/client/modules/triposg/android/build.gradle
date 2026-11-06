@@ -1,0 +1,83 @@
+// Module Gradle: Expo module + JNI lib over the shared C++ engine.
+//
+// ORT comes from Maven Central (the exact spike versions):
+//   com.microsoft.onnxruntime:onnxruntime-android-qnn:1.29.0
+//   com.qualcomm.qti:qnn-runtime:2.50.0
+// The AARs' .so files package as jniLibs automatically; with
+// useLegacyPackaging (app.json/expo-build-properties) they extract to
+// nativeLibraryDir, where the HTP loader needs them. CMake needs the ORT
+// C API headers + libonnxruntime.so, taken from the same AAR via the
+// extractOrtAar task below.
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+group = 'expo.modules'
+version = '1.0.0'
+
+def safeExtGet(prop, fallback) {
+  rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback
+}
+
+android {
+  namespace "expo.modules.triposg"
+  compileSdkVersion safeExtGet("compileSdkVersion", 36)
+
+  defaultConfig {
+    minSdkVersion safeExtGet("minSdkVersion", 24)
+    targetSdkVersion safeExtGet("targetSdkVersion", 36)
+    // onnxruntime-android-qnn and qnn-runtime ship arm64-v8a only (HTP V79 target).
+    ndk {
+      abiFilters "arm64-v8a"
+    }
+    externalNativeBuild {
+      cmake {
+        // Filled by extractOrtAar (runs before CMake configure).
+        arguments "-DORT_AAR_DIR=${layout.buildDirectory.get().asFile.absolutePath}/ort-aar"
+      }
+    }
+  }
+
+  externalNativeBuild {
+    cmake {
+      path "CMakeLists.txt"
+      version "3.22.1"
+    }
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+  kotlinOptions {
+    jvmTarget = '17'
+  }
+  buildFeatures {
+    prefab true
+  }
+}
+
+configurations {
+  ortAar
+}
+
+dependencies {
+  implementation project(':expo-modules-core')
+  implementation 'com.microsoft.onnxruntime:onnxruntime-android-qnn:1.29.0'
+  implementation 'com.qualcomm.qti:qnn-runtime:2.50.0'
+  ortAar 'com.microsoft.onnxruntime:onnxruntime-android-qnn:1.29.0@aar'
+}
+
+task extractOrtAar(type: Copy) {
+  def aar = configurations.ortAar.singleFile
+  onlyIf { aar.exists() }
+  from { zipTree(aar) }
+  include 'headers/**'
+  include 'jni/**/libonnxruntime.so'
+  into "${layout.buildDirectory.get().asFile.absolutePath}/ort-aar"
+}
+
+afterEvaluate {
+  tasks.matching { it.name.startsWith("configureCMake") }.configureEach {
+    dependsOn(extractOrtAar)
+  }
+}

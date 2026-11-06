@@ -249,7 +249,8 @@ Order of work (spike first):
    parity confidence, not on-device model speed or output quality.
 
 Keep: audit (this file), 5-image Colab goldens, one runtime spike on
-Android, real stage labels, cancel on background, placeholder behind env
+Android, real stage labels, background-safe conversion (foreground
+service; user Cancel only), placeholder behind env
 flag, airplane-mode convert → Explore → Stage flow on the Xiaomi.
 
 Cut/defer: RMBG stage (pre-cut inputs only); iOS build and Documents-backup
@@ -455,3 +456,322 @@ Evidence: `ml/triposg-mobile/eval/matrix.md` (per-component × runtime),
   on-device decimation (≈1M tris / ≈25–50 MB per GLB must shrink to
   ≈100k faces for Explore cards) — both Phase 3, with 5.6 GB + 440 MB
   of model bins forcing download management first.
+
+## NPU memory (DMA-BUF) and the w8a16 follow-up
+
+The VmHWM/PSS numbers above are host-side process memory. On the phone
+the NPU weights live in DMA-BUF (unswappable), which is what actually
+kills the app:
+
+- `dmabuf_dump` on the resident 23-unit FP32 DiT chain: **8.96 GB**.
+  Per unit: one ~240–272 MB buffer (the context weights; `model.bin` is
+  247 MB per block) plus ~130–150 MB of per-session scratch/I-O buffers.
+  VAE adds ~0.8 GB → app total ≈ 9.8 GB.
+- HyperOS kills the app mid-run: `am_kill … stop com.spotnackmuse.ondevice
+  due to used too many dmabuf resource, dmabuf used rss:9842572kb, dmabuf
+  threshold:1572864kb` (adj 0, while loading); lmkd logs `thrashing
+  (74%)`, `critical pressure`, dozens of kills per minute.
+- Probe (`bench/aihub_memory_probe.py`, `logs/spike/memprobe/`): forcing
+  `default_graph_htp_precision=FLOAT16` gives byte-identical 247 MB bins
+  (no gain); linking 3 blocks with `qnn_dlc` + `submit_link_job` works,
+  but AI Hub refuses to wrap the multi-graph context as ONNX ("Wrapping
+  QNN Context Binary with multiple graphs is currently not supported").
+
+The fix is int8 weights / int16 activations (w8a16) on the DiT chain via
+the ORT QNN QDQ path, cutting weights ≈ 4× (247 MB → ~60 MB per block)
+and total DMA-BUF from ~9 GB toward ≲ 3 GB:
+
+- `bench/capture_calib.py`: runs the FP32 b1 units on ORT CPU over real
+  10-step CFG-7 trajectories (3 goldens, held-out uegvsd + yuyyuw) into
+  `logs/spike/calib/<golden>/<stem>_s<ii>_r<r>.npz`.
+- `bench/quantize_units.py`: per unit, `qnn_preprocess_model` → QDQ
+  static quant (`QUInt16` activations / `QInt8` per-tensor symmetric
+  weights; per-channel MatMul is unsupported on QNN) → CPU check vs FP32
+  on held-out samples (stops above rel_l2 0.1) → `logs/spike/w8a16/`.
+  VAE post/query stay FP32.
+- `bench/aihub_compile.py --variant w8a16` → `logs/spike/aihub_w8a16/`
+  (same QAIRT 2.50 / S25 / precompiled_qnn_onnx; ~70 MB uploads).
+- Phone: `spike_adb_chain_npu.sh AIHUB=.../aihub_w8a16
+  REMOTE=/data/local/tmp/triposg-chain-w8a16` (step-0 parity),
+  `bench/spike_adb_dmabuf.sh` (before/after DMA-BUF),
+  `spike_adb_pipeline.sh ID=<golden> REMOTE=<same>` (mesh parity 5/5,
+  same gate as today: 50 steps, CFG 7, d0=6, d1=8).
+- Release: `make_model_manifest.py --version v2-w8a16-50step
+  --aihub-manifest .../aihub_w8a16/manifest_w8a16.json --out
+  .../models_manifest_w8a16.json --js-out <bundled manifest>`; sideload
+  with `VERSION=v2-w8a16-50step AIHUB=... MANIFEST=...`. The app needs no
+  code change: the native side picks the newest version dir holding a
+  manifest, and the JS version comes from the manifest data.
+
+## One merged NPU session (shipping): 9.0 GB → 7.1 GB DMA-BUF
+
+QNN's verbose log (`estimated PD size ... nonSharedWeight / I/O /
+runlist / spillfill`) showed every context pins its own **spill-fill
+buffer**: 99 MiB for blk00–10, 73 MiB for blk11–20, 65 MiB for tail —
+1.8 GiB together, while only one unit runs at a time. ORT's QNN EP
+shares one spill-fill buffer across all EPContext nodes of a single
+session (`QNN_HTP_CONTEXT_CONFIG_OPTION_REGISTER_MULTI_CONTEXTS`,
+sized by the EPContext attribute `max_size`), but AI Hub writes no
+`max_size`, and the units cannot share a graph as compiled: ORT binds
+EPContext I/O to QNN tensors by name and every unit uses the same names
+(`hidden_in`, `output_0`).
+
+`bench/merge_chain.py` fixes both without recompiling: it copies each
+`model.bin`, rewrites only the flatbuffer I/O names in the first 2 KB
+of the header (length-prefixed, in place: `hd`, `h00..h20`,
+`s00..s09`, `temb`, `noise_pred`; the HTP blob refers to tensors by id
+and is untouched), and writes `dit_chain.onnx` — 23 EPContext nodes
+wired head → blk00..blk20 → tail with `ep_cache_context =
+"<stem>/model.bin"` and `max_size` = 100 MiB (true max 103,809,024 B
+from blk00). `temb` is exposed as a second graph output because ORT
+drops unused fused-node outputs and the head QNN graph would otherwise
+have no match.
+
+On-device (spike_bench, cond row, step 0):
+
+| Variant | Peak DMA-BUF | Row pass | Parity |
+|---|---|---|---|
+| FP32, 23 sessions (shipping) | ~9.0 GB (+VAE) | 2.07 s | baseline |
+| **FP32 merged (`logs/spike/merged/fp32`)** | **7.14 GB** | **1.48–1.69 s** | **bit-identical (max abs 0.0)** |
+| w8a16 mixed, merged | 6.67 GB | 2.73 s | rel_l2 1.0e-2; not worth it |
+
+Session create is ~6.8 s for the whole merged chain.
+
+Why not w8a16 / FP16: quantized blocks shrink weights to 70 MB, but
+their runlist grows to 133 MB (vs 10 MB) and their spill-fill to
+~210 MB — net saving only ~0.5 GB, at 15% slower plus a quality risk.
+FP16 ONNX does not help either: QNN still pins 245 MB of weights per
+block. So we ship **FP32 merged** (`v2-fp32-merged-50step`); the w8a16
+tooling above stays as documented research.
+
+App changes (`modules/triposg/cpp/pipeline.cpp`): merged mode creates
+ONE QNN session from `<model_dir>/dit_chain.onnx` when present (same
+options as `MakeSession`: burst, no spinning, intra-op 1, arena off),
+runs each row as a single `Run` fetching `noise_pred` only, and
+`DropFileCache`s the onnx plus all 23 `<stem>/model.bin` after
+creation. The 23-session path stays as the fallback for v1 model dirs.
+VAE sessions are deferred until after sampling (vae_post's bin alone is
+413 MB) and released stage by stage — post after kv, query after
+extraction, before polygonize/decimate. A single merged `Run` cannot be
+interrupted mid-row; at ~1.6 s the cancel bound stays between steps.
+
+Mitigations already in the app (`modules/triposg/cpp/pipeline.cpp`):
+every Convert releases all sessions on exit, the transformer
+session(s) are dropped before the VAE stage, `DropFileCache()` after
+each session load, QNN sessions use 1 intra-op thread with spinning
+disabled.
+
+---
+
+# Phase 3: Native Implementation (part A — engine + module)
+
+Status: engine + local Expo module written, not yet built on-device.
+Part B (JS adapter, model-management UI, hook swap) comes next.
+
+## Architecture
+
+- `client/modules/triposg/` — local Expo module (`@spotnack/triposg`,
+  portal-linked). Kotlin (`TripoSGModule`) + JNI + CMake; Gradle pulls
+  `onnxruntime-android-qnn:1.29.0` + `qnn-runtime:2.50.0` from Maven
+  Central (the exact spike versions) and extracts the AAR's headers +
+  `libonnxruntime.so` for CMake. iOS is a stub reporting `unsupported`.
+- `client/modules/triposg/cpp/` — engine: `pipeline.{h,cpp}`
+  (orchestration ported from the proven `bench/ndk/pipeline.cpp`),
+  `preprocess.{h,cpp}` (u2net bg removal + prepare_image + DINOv2
+  preprocessing), `decimate.{h,cpp}` (meshoptimizer v0.24, MIT, vendored),
+  `models.{h,cpp}` (manifest + verify). The `ml/triposg-mobile/cpp`
+  core (extract/marching/GLB) is reused via `add_subdirectory` — one
+  copy, never forked.
+- Threads: JS calls return immediately (jobId); one native worker thread
+  runs conversions serially. Progress weights follow the measured stage
+  durations in `logs/phase2/`.
+
+## Memory / load-unload plan
+
+- No session stays resident between runs: every Convert releases all
+  sessions on exit (weights live in HTP DMA-BUF; PSS stayed ≤ 363 MB in
+  Phase 2, but DMA-BUF is what kills). Within a run, only one stage's
+  sessions exist at a time: transformer (one merged session, 7.1 GB, or
+  23 fallback sessions) → released → VAE (created after sampling; post
+  released after kv, query after extraction) → released before
+  polygonize/decimate. `release()` drops everything on memory pressure
+  while idle — never mid-conversion.
+- DINOv2 + u2net CPU sessions open per conversion and close before the
+  transformer stage. Preflight requires 3 GB MemAvailable and
+  models + 1 GiB free storage.
+
+## Model management (part A side)
+
+- Models live in `getExternalFilesDir(null)/triposg/<version>/` (v1: 25
+  `<stem>/model.{onnx,bin}`; v2 merged: `dit_chain.onnx` +
+  `<stem>/model.bin` for the 23 transformer stems, VAE unchanged; plus
+  `dinov2_encoder.onnx` + `u2net.onnx` + `models_manifest.json`).
+  `bench/make_model_manifest.py` (`--merged-dir` for v2) builds the
+  manifest; `bench/sideload_models.sh` (`MERGED=` for v2) adb-pushes it.
+- Native `verifyModels()` checks sizes always, SHA-256 on demand
+  (streamed, with progress). The resumable downloader (base URL
+  `EXPO_PUBLIC_TRIPOSG_MODEL_BASE_URL`) is part B; the native API is
+  already shaped for it (`getStatus` reports modelDir/version).
+
+## Cancel bounds
+
+Atomic flag checked between steps, per VAE-query chunk, and around
+polygonization (between transformer units only on the v1 fallback
+path). A stop lands within ~1 row pass (~1.6 s merged), or the running
+extraction/marching pass finishes first (~12 s worst case at d1=8).
+Partial outputs use temp names + rename; cancel deletes them.
+
+---
+
+# Phase 3: Native Implementation (part B — app integration)
+
+Status: written, not yet built on-device (needs `npx expo prebuild -p
+android` + Gradle release + the checks below).
+
+## Adapter + hook swap
+
+- `triposg-image-to-3d.adapter.js` implements `ImageTo3dPort` over the
+  module: `signal → cancel(jobId)` rejecting with
+  `ImageTo3dCancelledError`; native labels mapped to card copy, with the
+  sampling window ([0.020, 0.950] in `pipeline.cpp`) carrying the step
+  counter ("Generating shape (step 12/50)"); the DISPLAY mesh
+  (`mesh.display.glb`, 100k tris default) is copied under `Paths.cache`
+  for the caller to move. `generator = triposg@2c1c516d+qnn-htp-fp16`
+  (weights revision + runtime + precision).
+- Unsupported / models-missing surface as `ImageTo3dUnavailableError`
+  (new, in the conversion entity); the hook falls back to the
+  placeholder so the workflow keeps working, and the model-status row
+  carries the reason.
+- `EXPO_PUBLIC_IMAGE_TO_3D_MODE=ondevice` sends gallery photos to the
+  TripoSG adapter; demo goldens keep their adapter in every mode
+  (`eas.json` gains an `ondevice` profile: APK, internal,
+  `APP_VARIANT=ondevice`, ondevice + demo-auth env).
+
+## Model management
+
+- `domain/model-management.port.js` + `infrastructure/
+  model-management.adapter.js`: states not-installed / downloading
+  (bytes, fraction) / paused / verifying / installed / corrupt /
+  unsupported. State is derived from the device on every read (no
+  cached state), so a restart lands in PAUSED (partials on disk),
+  INSTALLED (sizes match), or NOT_INSTALLED.
+- The manifest ships in the app as GENERATED
+  `triposg-models.manifest.js` (7,696 bytes for the 52 files;
+  `make_model_manifest.py --js-out`); the adapter passes its file list
+  to native, so download and verify can never drift from the manifest.
+- Download runs in Kotlin (`TripoSGDownload.kt`): HTTP Range resume per
+  file, `.part` temp + SHA-256 + rename (never a half-written model),
+  `models_manifest.json` written last, progress events ~2 Hz, pause via
+  a worker flag that never touches the C++ engine. Re-calling resumes
+  after pause or restart. A corrupt set is wiped before its retry
+  (size-matching files would otherwise be skipped).
+- Guards before starting: `downloadPreflight` (free space via
+  `usableSpace` on the remainder; metered-link detection via
+  `ConnectivityManager`) → `ModelSpaceError` / a cellular confirm row
+  (`ModelMeteredNetworkError`); no base URL → sideload copy + Verify
+  (`ModelSideloadRequiredError`). Delete removes the version dir.
+- UI: one compact model-status row in the existing card style (status
+  text, total size, download/pause/resume/verify/delete, progress bar);
+  convert stays disabled until INSTALLED. Unsupported devices get the
+  native one-liner and keep placeholder behavior.
+
+## Lifecycle
+
+- Conversions run inside a `dataSync` Android foreground service
+  (`TripoSGService`, owned by the module): ongoing notification with
+  stage + percent and a Cancel action, partial wake lock while running.
+  dataSync covers this job (local file processing: photo in, GLB out);
+  shortService was rejected (its ~3 min timeout ANRs midway through a
+  ~5 min run) and specialUse is for cases no other type covers. Runs
+  start from the foreground, so Android 15's BOOT_COMPLETED restriction
+  on dataSync does not apply. Manifest declares `FOREGROUND_SERVICE` +
+  `FOREGROUND_SERVICE_DATA_SYNC` (install-time) + `WAKE_LOCK`;
+  `POST_NOTIFICATIONS` is requested once before the first conversion —
+  denied only hides the notification, the service still runs.
+- A conversion stops only on the user's Cancel (in-app button or
+  notification action), on error, or if the OS kills the service. The
+  hook's AppState-background cancel is gone; leaving the screen (e.g.
+  sign-out) still aborts, because the save pipeline is torn down with it.
+- `release()` on trim memory / low memory only when no conversion runs
+  (a backgrounded conversion keeps its HTP sessions by design).
+- Result delivery: the module persists one job record
+  (`filesDir/triposg/job.json`: id, status, output paths, save context;
+  paths captured once, never a re-resolved background Context). The
+  worker writes fraction/label at most every 5 s and the terminal
+  status the moment it finishes, before the service stops. The hook
+  reads it on mount — a live job reattaches to its events, a done job
+  completes its save exactly like a normal completion, a
+  failed/interrupted job reports and a cancelled one clears silently.
+  Cancelled/failed jobs leave no files; outputs live in filesDir (not
+  cache) so they survive backgrounding. A "running" record with no live
+  worker (process died) reports interrupted and offers a retry.
+- Notification budget: dedicated thread, one reused builder, posts only
+  on stage change or ≥ 5 s with a changed percent; worker thread at
+  `THREAD_PRIORITY_DEFAULT` with the wake lock held. HyperOS may still
+  throttle backgrounded apps (a background run measured ~2× a
+  foreground one even after this).
+- Save gate: engine temp-names + rename-on-success only; JS saves a
+  done record only after both meshes pass a GLB header + length check.
+  Interrupted/failed runs delete outputs and never save.
+
+## Explore during a conversion
+
+Opening Explore ~25 s into a conversion (NPU sessions loading,
+MemAvailable ≈ 1.1 GB) killed the app: `JavascriptException: Error: GL
+is currently not available`, and the conversion — same process, foreground
+service and all — died with it. Mechanism: expo-gl's `GLView` throws
+`CodedError(ERR_GL_NOT_AVAILABLE)` from its `_onSurfaceCreate` *event
+handler* when the native context cannot be created (memory pressure, or
+several viewers mounting at once). Error boundaries cannot catch
+event-handler throws, so release builds treat it as fatal.
+
+Fix (all app-side, `src/features/explore/.../explore-card/`):
+
+- `gl-availability.js` installs a narrow global-handler filter: only the
+  exact expo-gl code/message is reported non-fatally (console warning +
+  viewer notification); every other error still goes to the previous
+  handler, so dev LogBox and release fatal behavior are unchanged for
+  real bugs. No node_modules fork (R3F owns the GLView; patch-package
+  was the fallback and was not needed).
+- `GlbModelViewer` shows a static photo/icon fallback on notification
+  and retries on remount (new uri, or the card scrolling back into
+  view); the render-phase error boundary and its 2 auto-remounts are
+  unchanged. Stage-3d (explicit tap) still attempts live GL and falls
+  back with a message instead of crashing.
+- While a conversion runs, every Explore card renders its static
+  thumbnail: `useConversionRunning` (persisted-job backed, so it covers
+  service-side runs after relaunch too) flows through the Explore
+  view-model into `previewOnly` on every section list. No PNG poster
+  pipeline was added: the creation's source photo — already persisted
+  with the shape — is the static thumbnail, and the neutral placeholder
+  covers shapes with no photo.
+- Live views are capped at 2 app-wide even when idle: each section list
+  tracks its visible cards (FlatList viewability, 50% threshold) and
+  cards compete for leases in `gl-view-lease.js` (most recently seen
+  wins); losers keep their static thumbnail. GLB preload is likewise
+  gated on live intent, so static cards never park multi-MB meshes in
+  JS memory.
+
+## APK size
+
+- `modules/triposg/app.plugin.js` (config plugin, listed in
+  `app.json`) appends `packaging.jniLibs.excludes` for the unused QNN
+  backends: DSP (+V66), GPU, and HTP skels/stubs V68/V69/V73/V75/V81.
+  Kept: `libQnnHtp.so`, `libQnnHtpPrepare.so` (EPContext loading may
+  need it), `libQnnHtpV79Skel.so`, `libQnnHtpV79Stub.so`,
+  `libQnnSystem.so`, plus ORT's `libonnxruntime.so` and
+  `libtriposg_jni.so`. Summed from the qnn-runtime 2.50.0 AAR listing,
+  the excludes drop ≈93.6 MB of uncompressed `.so` (≈126 MB → ≈32 MB
+  APK); confirm with `unzip -l` on the built APK.
+
+## Host-side trigger (no UI)
+
+- `src/app/dev-triposg.jsx` is deleted. Usage: push a photo, then
+  `adb shell am broadcast -a expo.modules.triposg.DEBUG_CONVERT`
+  (optional extra `image`, default
+  `file:///sdcard/Download/triposg-test.png`); follow
+  `adb logcat -s TripoSGDebug`. The receiver
+  (`TripoSGDebugReceiver.kt` + one static JNI entry with fixed knobs:
+  50 steps, seed 42) refuses to run unless the app is debuggable, so it
+  is harmless in release. Grant the photo permission once via the
+  app's picker first (shared-storage reads need it).

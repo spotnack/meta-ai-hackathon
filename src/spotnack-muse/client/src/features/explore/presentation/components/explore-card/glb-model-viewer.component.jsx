@@ -1,6 +1,6 @@
 // React
 import { Component, Fragment, useRef, useEffect, useState, useMemo, Suspense } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Image, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 // Three.js
@@ -12,6 +12,10 @@ import { Canvas, useFrame } from "@react-three/fiber/native";
 // React Three Drei
 import { useGLTF } from "@react-three/drei/native";
 import { ContactShadows } from "@react-three/drei";
+
+// GL context failure guard (expo-gl throws from its surface-create event
+// handler, which error boundaries cannot catch).
+import { subscribeGlNotAvailable } from "./gl-availability";
 
 const _origWarn = console.warn;
 console.warn = (...args) => {
@@ -189,18 +193,71 @@ const CanvasFallback = ({ isRetrying, backgroundColor }) => (
 
 const fallbackStyles = StyleSheet.create({
   container: { flex: 1, alignItems: "center", justifyContent: "center" },
+  photo: { ...StyleSheet.absoluteFillObject, opacity: 0.55 },
+  caption: {
+    marginTop: 8,
+    marginHorizontal: 12,
+    textAlign: "center",
+    fontSize: 12,
+    color: FALLBACK_ICON_COLOR,
+  },
 });
 
-export const GlbModelViewer = ({ uri, canvas, scaleFactor, background, showShadows = false }) => {
+/**
+ * Static stand-in shown when the native GL context could not be created
+ * (reported non-fatally by the expo-gl guard). Same look as the other
+ * fallbacks; never attempts GL again until the viewer remounts.
+ * @param {object} root0 - Component props.
+ * @param {string|null} root0.photoUri - Photo shown behind the icon, if any.
+ * @param {string} root0.backgroundColor - Container background.
+ * @param {string|null} root0.caption - Message under the icon, if any.
+ * @returns {React.JSX.Element} The static fallback.
+ */
+const GlUnavailableFallback = ({ photoUri, backgroundColor, caption }) => (
+  <View style={[fallbackStyles.container, { backgroundColor }]}>
+    {photoUri ? (
+      <Image source={{ uri: photoUri }} style={fallbackStyles.photo} />
+    ) : null}
+    <MaterialCommunityIcons name="cube-off-outline" size={32} color={FALLBACK_ICON_COLOR} />
+    {caption ? <Text style={fallbackStyles.caption}>{caption}</Text> : null}
+  </View>
+);
+
+/**
+ * Renders a GLB model in a 3D canvas, with static fallbacks.
+ * @param {object} root0 - Component props.
+ * @param {string} root0.uri - URI of the GLB asset to load.
+ * @param {object} [root0.canvas] - Container style override.
+ * @param {number} [root0.scaleFactor] - Multiplier applied on top of the auto-fit scale.
+ * @param {string} [root0.background] - Canvas background color.
+ * @param {boolean} [root0.showShadows] - Whether to render contact shadows.
+ * @param {string|null} [root0.photoUri] - Photo for the GL-unavailable fallback, if any.
+ * @param {string|null} [root0.fallbackCaption] - Message for the GL-unavailable fallback, if any.
+ * @returns {React.JSX.Element} The viewer or its fallback.
+ */
+export const GlbModelViewer = ({ uri, canvas, scaleFactor, background, showShadows = false, photoUri = null, fallbackCaption = null }) => {
   const backgroundColor = background ?? DEFAULT_BACKGROUND;
   // Defer Canvas creation until after the first commit so the native GLView
   // surface is fully attached before WebGLRenderer calls getShaderPrecisionFormat.
   const [surfaceReady, setSurfaceReady] = useState(false);
   useEffect(() => { setSurfaceReady(true); }, []);
+  // A missing GL context throws from expo-gl's event handler, outside the
+  // error boundary below: the guard reports it here so this viewer shows
+  // its static fallback instead of dying with the process. A new uri
+  // remounts the canvas for a fresh context attempt.
+  const [glUnavailable, setGlUnavailable] = useState(false);
+  useEffect(() => subscribeGlNotAvailable(() => setGlUnavailable(true)), []);
+  useEffect(() => { setGlUnavailable(false); }, [uri]);
 
   return (
     <View style={canvas ?? DEFAULT_STYLE} pointerEvents="none">
-      {!surfaceReady ? (
+      {glUnavailable ? (
+        <GlUnavailableFallback
+          photoUri={photoUri}
+          backgroundColor={backgroundColor}
+          caption={fallbackCaption}
+        />
+      ) : !surfaceReady ? (
         <CanvasFallback isRetrying backgroundColor={backgroundColor} />
       ) : (
         <GlCanvasBoundary

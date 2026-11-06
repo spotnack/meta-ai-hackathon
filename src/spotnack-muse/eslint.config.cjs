@@ -52,4 +52,10 @@ module.exports = [
       "jsdoc/no-undefined-types": "off",
     },
   },
+  {
+    files: ["client/**/*.test.{js,jsx,ts,tsx}"],
+    languageOptions: {
+      globals: require("globals").jest,
+    },
+  },
 ];

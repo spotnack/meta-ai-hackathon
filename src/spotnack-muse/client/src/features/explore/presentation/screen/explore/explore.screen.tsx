@@ -39,6 +39,7 @@ function ExploreScreenContent(): React.JSX.Element {
   const {
     sections,
     isLoading,
+    conversionRunning,
     generatedAssets,
     isGeneratedAssetsLoading,
     generatedAssetsError,
@@ -79,6 +80,7 @@ function ExploreScreenContent(): React.JSX.Element {
               onRetry={() => retryGeneratedAssets()}
               getMenuActions={getItemMenuActions}
               busyIds={deletingIds}
+              previewOnly={conversionRunning}
             />
             {Object.keys(sections).map((key) => (
               <ExploreSectionListComponent
@@ -88,6 +90,7 @@ function ExploreScreenContent(): React.JSX.Element {
                 pageToNavigate="Stage3dScreen"
                 isLoading={isLoading}
                 getMenuActions={getItemMenuActions}
+                previewOnly={conversionRunning}
               />
             ))}
           </GeneratedShapesContainer>

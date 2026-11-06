@@ -41,6 +41,24 @@ export class ImageTo3dCancelledError extends Error {
 }
 
 /**
+ * Raised by an ImageTo3dPort when the on-device pipeline cannot run: the
+ * device is unsupported or the model files are not installed. The card
+ * shows the message as-is (it already names the remedy), unlike generic
+ * failures. `code` is "unsupported" or "models-missing".
+ */
+export class ImageTo3dUnavailableError extends Error {
+  /**
+   * @param {string} code - "unsupported" or "models-missing".
+   * @param {string} message - Card-ready explanation.
+   */
+  constructor(code, message) {
+    super(message);
+    this.name = "ImageTo3dUnavailableError";
+    this.code = code;
+  }
+}
+
+/**
  * Clamps a reported progress fraction to [0, 1] so a misbehaving pipeline cannot break the progress bar.
  * @param {number} fraction - Raw progress.
  * @returns {number} Progress between 0 and 1.

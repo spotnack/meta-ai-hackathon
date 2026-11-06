@@ -22,14 +22,19 @@ export const DEMO_GOLDEN_IDS = Object.freeze([
 ]);
 
 // "placeholder" (default) keeps the simulated adapter; "demo" serves the
-// cloud-GPU goldens. The real on-device adapter will take a third value.
+// cloud-GPU goldens; "ondevice" runs the real TripoSG module on gallery
+// photos (Android SM8750 with downloaded models, else the placeholder).
 export const IMAGE_TO_3D_MODES = Object.freeze({
   PLACEHOLDER: "placeholder",
   DEMO: "demo",
+  ONDEVICE: "ondevice",
 });
 
 export const isDemoImageTo3dMode = () =>
   process.env.EXPO_PUBLIC_IMAGE_TO_3D_MODE === IMAGE_TO_3D_MODES.DEMO;
+
+export const isOndeviceImageTo3dMode = () =>
+  process.env.EXPO_PUBLIC_IMAGE_TO_3D_MODE === IMAGE_TO_3D_MODES.ONDEVICE;
 
 // Bundled demo inputs (see header). Static require paths so Metro
 // includes each PNG in the app bundle.

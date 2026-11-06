@@ -13,9 +13,12 @@ dependencies:
   - pip
   - pip:
       - torch==2.5.1+cu121
-      - torchvision==0.20.1
+      - torchvision==0.20.1+cpu
       - torchsummary
       - --extra-index-url=https://download.pytorch.org/whl/cu121
+      # torchvision +cpu (used by the front-end refs script) resolves from
+      # the PyTorch CPU index, the same way torch resolves from cu121.
+      - --extra-index-url=https://download.pytorch.org/whl/cpu
       # On-device TripoSG pipeline (ml/triposg-mobile/): ONNX export,
       # FP16 conversion, parity checks and mesh tools. Versions match the
       # env the exports were validated with (torch 2.5.1 runs CPU-only too).
@@ -33,9 +36,14 @@ dependencies:
       - trimesh==5.2.0
       - pymeshlab==2025.7.post1
       - pillow==12.3.0
+      # Front-end reference script (make_preprocess_refs.py): exact cv2
+      # resize + skimage imports of TripoSG's image_process.py.
+      - opencv-python-headless==4.11.0.86
+      - scikit-image==0.25.2
       - tqdm==4.70.1
       - qai-hub==0.57.0
       - onnxsim==0.7.3
+      - onnxconverter-common==1.16.0
 
 # conda env update -n spotnack-muse --file environment.yml --prune && conda activate spotnack-muse
 #

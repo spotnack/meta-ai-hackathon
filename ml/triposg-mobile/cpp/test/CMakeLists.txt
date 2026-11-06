@@ -54,3 +54,24 @@ target_include_directories(test_vae_decode PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/.." "${ORT_INCLUDE_DIR}")
 target_link_libraries(test_vae_decode PRIVATE "${ORT_LIB}")
 set_target_properties(test_vae_decode PROPERTIES BUILD_RPATH "${ORT_LIBDIR}")
+
+# test_preprocess: front-end parity (bg removal + prepare + DINOv2
+# preprocessing). Compiles the module's own preprocess.cpp — the one
+# copy, referenced here by relative path, never forked.
+set(MODULE_CPP
+  "${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/spotnack-muse/client/modules/triposg/cpp")
+add_executable(test_preprocess
+  test_preprocess.cpp
+  "${MODULE_CPP}/preprocess.cpp")
+target_include_directories(test_preprocess PRIVATE
+  "${MODULE_CPP}" "${ORT_INCLUDE_DIR}")
+target_link_libraries(test_preprocess PRIVATE "${ORT_LIB}")
+set_target_properties(test_preprocess PROPERTIES BUILD_RPATH "${ORT_LIBDIR}")
+
+# primitives_probe: CLI over the exact-port primitives (no ORT needed;
+# preprocess.cpp is dependency-free). Graded bit-exactly by
+# check_primitives.py.
+add_executable(primitives_probe
+  primitives_probe.cpp
+  "${MODULE_CPP}/preprocess.cpp")
+target_include_directories(primitives_probe PRIVATE "${MODULE_CPP}")

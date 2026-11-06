@@ -73,6 +73,14 @@ export default function HomeScreen() {
               onCancelConversion={vm.cancelConversion}
               onViewResult={vm.viewResult}
               onOpenSettings={vm.openSettings}
+              modelState={vm.modelsVisible ? vm.modelState : null}
+              modelActionError={vm.modelsVisible ? vm.modelActionError : null}
+              modelsWorking={vm.modelsWorking}
+              needsMeteredConfirm={vm.needsMeteredConfirm}
+              onDownloadModels={vm.onDownloadModels}
+              onPauseDownloadModels={vm.onPauseDownloadModels}
+              onVerifyModels={vm.onVerifyModels}
+              onDeleteModels={vm.onDeleteModels}
             />
           </ConverterContainer>
         </ScrollView>

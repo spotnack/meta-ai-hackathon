@@ -19,6 +19,14 @@ One command does all phases; reruns resume from the manifest:
 Usage (triposg-spike env; needs the QAI_HUB API token configured):
   python -u bench/aihub_compile.py [--stems head,blk00,blk01] [...]
   python -u bench/aihub_compile.py --stems vae_post,vae_query
+  python -u bench/aihub_compile.py --variant w8a16 [--stems blk00,...]
+
+--variant w8a16 compiles the QDQ-quantized units from bench/quantize_units.py
+(logs/spike/w8a16/<stem>/model.onnx + model.onnx.data, same 23 stems and
+I/O names) into logs/spike/aihub_w8a16/ without touching the fp32 outputs.
+Uploads are ~70 MB per unit. VAE stems stay fp32-only (rejected under w8a16).
+--variant fp16 does the same for bench/fp16_units.py (logs/spike/fp16 ->
+logs/spike/aihub_fp16/manifest_fp16.json; ~125 MB per unit, fp16 I/O).
 
 VAE stems (export_vae.py outputs in logs/spike/vae/) compile/profile the
 same way without touching the 23 transformer units; chain_remote.txt keeps
@@ -43,6 +51,49 @@ B1_STEMS = ["head"] + [f"blk{i:02d}" for i in range(N_LAYERS)] + ["tail"]
 VAE_STEMS = ["vae_post", "vae_query"]
 ALL_STEMS = B1_STEMS + VAE_STEMS
 VAE_ONNX_DIR = Path("ml/triposg-mobile/logs/spike/vae")
+FP32_B1_DIR = "ml/triposg-mobile/logs/spike/b1"
+FP32_OUT_DIR = "ml/triposg-mobile/logs/spike/aihub"
+W8A16_B1_DIR = "ml/triposg-mobile/logs/spike/w8a16"
+W8A16_OUT_DIR = "ml/triposg-mobile/logs/spike/aihub_w8a16"
+FP16_B1_DIR = "ml/triposg-mobile/logs/spike/fp16"
+FP16_OUT_DIR = "ml/triposg-mobile/logs/spike/aihub_fp16"
+VARIANT_DIRS = {
+    "w8a16": (W8A16_B1_DIR, W8A16_OUT_DIR, "manifest_w8a16.json"),
+    "fp16": (FP16_B1_DIR, FP16_OUT_DIR, "manifest_fp16.json"),
+}
+
+
+def unit_source(stem, variant, b1_dir):
+    """(src_dir, src_base, hint) for one stem: where its .onnx + .data live.
+
+    fp32 transformer units are flat (dit_<stem>_fp32.onnx in b1_dir);
+    w8a16 units are per-stem dirs (model.onnx + model.onnx.data, written
+    by bench/quantize_units.py); VAE stems always come from export_vae.py.
+    """
+    if stem in VAE_STEMS:
+        return VAE_ONNX_DIR, f"{stem}_fp32", "run export_vae.py first"
+    if variant in VARIANT_DIRS:
+        hint = {"w8a16": "run bench/quantize_units.py first",
+                "fp16": "run bench/fp16_units.py first"}[variant]
+        return Path(b1_dir) / stem, "model", hint
+    return Path(b1_dir), f"dit_{stem}_fp32", "run split_export_step.py --all-b1"
+
+
+def job_tag(variant):
+    """Short job-name tag: fp32 keeps the historical 'b1' tag."""
+    return "b1" if variant == "fp32" else variant
+
+
+def resolve_dirs(variant, b1_dir_arg, out_dir_arg):
+    """(b1_dir, out_dir, manifest_name): variant defaults unless overridden."""
+    b1_dir, out_dir, manifest_name = b1_dir_arg, out_dir_arg, "manifest_b1.json"
+    if variant in VARIANT_DIRS:
+        v_b1, v_out, manifest_name = VARIANT_DIRS[variant]
+        if b1_dir_arg == FP32_B1_DIR:
+            b1_dir = v_b1
+        if out_dir_arg == FP32_OUT_DIR:
+            out_dir = v_out
+    return b1_dir, out_dir, manifest_name
 
 
 def log(msg):
@@ -98,14 +149,8 @@ def onnx_io(path):
     return ins, outs, ep_nodes
 
 
-def bundle_unit(stem, b1_dir, unit_dir):
+def bundle_unit(stem, src_dir, src_base, hint, unit_dir):
     """Copy the unit's .onnx + .data into the AI Hub upload directory."""
-    if stem in VAE_STEMS:
-        src_dir, src_base = VAE_ONNX_DIR, f"{stem}_fp32"
-        hint = "run export_vae.py --unit post/query first"
-    else:
-        src_dir, src_base = b1_dir, f"dit_{stem}_fp32"
-        hint = "run split_export_step.py --all-b1"
     src_onnx = src_dir / f"{src_base}.onnx"
     src_data = src_dir / f"{src_base}.onnx.data"
     for path in (src_onnx, src_data):
@@ -122,15 +167,19 @@ def bundle_unit(stem, b1_dir, unit_dir):
     return bundle, src_onnx
 
 
-def submit_compiles(client, device, options, units, pending):
+def submit_compiles(client, device, options, units, pending, variant):
     """Submit one compile job per pending stem; record job ids."""
     import qai_hub as hub  # noqa: F401 (keeps hub.Device attribute style)
 
+    tag = job_tag(variant)
     jobs = {}
     for stem in pending:
         bundle = Path(units[stem]["bundle_dir"])
         job = client.submit_compile_job(
-            str(bundle), device=device, name=f"triposg-b1-{stem}-fp32", options=options
+            str(bundle),
+            device=device,
+            name=f"triposg-{tag}-{stem}-{variant}",
+            options=options,
         )
         units[stem]["compile_job_id"] = job.job_id
         units[stem]["compile_status"] = "SUBMITTED"
@@ -243,10 +292,18 @@ def main():
     parser.add_argument(
         "--stems", default="", help="comma-separated subset (default: all 23 units)"
     )
-    parser.add_argument("--b1-dir", default="ml/triposg-mobile/logs/spike/b1")
-    parser.add_argument("--out-dir", default="ml/triposg-mobile/logs/spike/aihub")
+    parser.add_argument("--b1-dir", default=FP32_B1_DIR)
+    parser.add_argument("--out-dir", default=FP32_OUT_DIR)
     parser.add_argument(
         "--manifest", default="", help="default <out-dir>/manifest_b1.json"
+    )
+    parser.add_argument(
+        "--variant",
+        choices=["fp32", "w8a16", "fp16"],
+        default="fp32",
+        help="fp32: split_export_step.py units; w8a16: quantize_units.py "
+        "QDQ units (defaults switch to logs/spike/w8a16 + "
+        "logs/spike/aihub_w8a16/manifest_w8a16.json)",
     )
     parser.add_argument("--device", default="Samsung Galaxy S25 (Family)")
     parser.add_argument("--target-runtime", default="precompiled_qnn_onnx")
@@ -263,14 +320,21 @@ def main():
         if unknown:
             log(f"STOP: unknown stems {unknown} (want subset of {ALL_STEMS})")
             sys.exit(1)
-    b1_dir = Path(args.b1_dir)
-    out_dir = Path(args.out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    manifest_path = (
-        Path(args.manifest) if args.manifest else out_dir / "manifest_b1.json"
+    variant = args.variant
+    if variant != "fp32" and any(s in VAE_STEMS for s in stems):
+        log(f"STOP: VAE stems stay fp32-only; compile them without --variant {variant}")
+        sys.exit(1)
+    # Variant defaults kick in only when the fp32 paths were not overridden.
+    b1_dir_arg, out_dir_arg, manifest_name = resolve_dirs(
+        variant, args.b1_dir, args.out_dir
     )
+    b1_dir = Path(b1_dir_arg)
+    out_dir = Path(out_dir_arg)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = Path(args.manifest) if args.manifest else out_dir / manifest_name
 
     meta = {
+        "variant": variant,
         "device": args.device,
         "target_runtime": args.target_runtime,
         "qairt_version": args.qairt_version,
@@ -293,7 +357,8 @@ def main():
     # Phase 1: bundle every stem (cheap, always re-checked).
     for stem in stems:
         unit_dir = out_dir / stem
-        bundle, src_onnx = bundle_unit(stem, b1_dir, unit_dir)
+        src_dir, src_base, hint = unit_source(stem, variant, b1_dir)
+        bundle, src_onnx = bundle_unit(stem, src_dir, src_base, hint, unit_dir)
         entry = units[stem]
         entry["source_onnx"] = str(src_onnx)
         entry["source_data_bytes"] = Path(str(src_onnx) + ".data").stat().st_size
@@ -306,7 +371,9 @@ def main():
     jobs = {}
     if pending:
         log(f"submitting {len(pending)} compile jobs: {pending}")
-        jobs = submit_compiles(client, device, meta["compile_options"], units, pending)
+        jobs = submit_compiles(
+            client, device, meta["compile_options"], units, pending, variant
+        )
         save_manifest(manifest_path, meta, units)
     else:
         for stem in stems:
@@ -353,7 +420,10 @@ def main():
             log(f"{stem}: profile SKIPPED (no target model)")
             continue
         infer = client.submit_inference_job(
-            target, device=device, name=f"triposg-b1-{stem}-profile", profile=True
+            target,
+            device=device,
+            name=f"triposg-{job_tag(variant)}-{stem}-profile",
+            profile=True,
         )
         units[stem]["profile_job_id"] = infer.job_id
         log(f"{stem}: profile job {infer.job_id} {infer.url}")
