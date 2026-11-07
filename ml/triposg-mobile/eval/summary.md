@@ -1,4 +1,5 @@
 # Phase 2 summary: recommended hybrid configuration
+(Phase 4: shipped in-app — see "Phase 4 in-app rows" at the end.)
 
 Evidence: [matrix.md](matrix.md), `logs/phase2/` (parity reports + phone
 logs), `logs/spike/` (conversion + bench logs). Device: Xiaomi 15 Ultra
@@ -7,8 +8,9 @@ qnn-runtime 2.50.0, burst).
 
 ## Recommendation
 
-- Background removal: **rembg u2net on CPU** (Apache-2.0; Phase 3 port,
-  to be measured). RMBG-1.4 excluded (non-commercial).
+- Background removal: **rembg u2net on CPU** (Apache-2.0; in-app port
+  measured in Phase 4: ~1 s preview). RMBG-1.4 excluded
+  (non-commercial).
 - DINOv2 encoder: **FP32 on ORT CPU** (1.08 s, fits the budget; no NPU).
 - Transformer (23 batch-1 units) + `vae_post` + `vae_query`: **QNN HTP**,
   AI Hub precompiled EPContext (FP32 graphs; the HTP executes them at FP16
@@ -75,3 +77,22 @@ the 50-step reference, not broken geometry.
 - 5.6 GB of transformer bins + ≈440 MB of VAE bins cannot ship inside
   the app: Phase 3 needs model download/management (per-unit files,
   resume, versioning) before any on-device run.
+
+## Phase 4 in-app rows (measured 2026-11-07, release on-device build, merged FP32 session)
+
+Same config shipped in the app (50 steps, CFG 7.0, d0 6 / d1 8, u2net +
+DINOv2 CPU, 100k display; high-detail toggle: d1 9 + 200k display).
+Report: `logs/phase4/parity_inapp_core/phase1_report.md` (+ `timings.txt`).
+
+| Dimension | Value |
+| --- | --- |
+| End-to-end latency | Figurine 176 s in-app (185 s airplane mode, 0 network errors). 5 golden-noise parity runs back to back: 177.6–232.9 s (thermal drift). Stage split: dinov2 3–5 s, session create 11–17 s, sampling 150–189 s, vae 0.3 s, extraction 11–23 s, display 1.5–6 s. |
+| Parity | App core vs 5 GPU goldens: OVERALL PASS, both `mesh.glb` and `mesh.display.glb` (chamfer/diag 4.0–5.5e-3, F 0.917–0.987, IoU 0.958–0.974). |
+| Memory / kills | Lowest MemAvailable 2.0 GB (7.2 GB baseline, music apps open); 0 lmkd kills; tab switch < 2 s mid-run; Spotify-and-back keeps the job. |
+| Cancel | `cancelled` 1.5 s / 2.8 s after tap (≈3.2 s per step); no leftover job folders. |
+| High detail | Figurine 251 s (+75 s vs 176 s); full mesh 135 MB vs 34 MB; peak app RSS 1.68 GB; lowest MemAvailable 1.98 GB; 0 kills. Toggle hint: "≈ +1–2 min". |
+| Cut-out preview | 1.0 s for 856×664; warned "cut off" on a two-person selfie, clean on the figurine. |
+| Scroll | Explore gfxinfo: 988 frames, 0 janky, p99 7 ms (static thumbnails while converting). |
+| APK | release 98 MB → 63 MB without `libQnnHtpPrepare.so` (all units precompiled EPContext). |
+| Storage | Job folders deleted after save + startup sweep of orphans (174 MB jobs + 104 MB stale cache measured before the fix). |
+| Distribution | Hugging Face download (`spotnack/triposg-sm8750-qnn`) or sideload (6.9 GB, SHA-256 manifest); iOS unsupported (QNN Android-only); SM8750-only (other SoCs need their own AI Hub compile). |

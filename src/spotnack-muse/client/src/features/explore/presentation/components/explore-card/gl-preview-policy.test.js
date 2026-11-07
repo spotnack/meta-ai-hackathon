@@ -6,6 +6,7 @@ import {
   sameIdList,
   takeVisibleIds,
 } from "./gl-preview-policy";
+import { MAX_LIVE_GL_VIEWS } from "./gl-view-lease";
 
 describe("resolveCardPreview", () => {
   test("a live lease renders live GL", () => {
@@ -52,8 +53,10 @@ describe("resolveCardPreview", () => {
 describe("takeVisibleIds", () => {
   const entries = (ids) => ids.map((id) => ({ item: { id } }));
 
-  test("caps at the first two viewable cards, in list order", () => {
-    expect(takeVisibleIds(entries(["a", "b", "c"]))).toEqual(["a", "b"]);
+  test("caps at the first MAX_LIVE_GL_VIEWS viewable cards, in list order", () => {
+    const ids = Array.from({ length: MAX_LIVE_GL_VIEWS + 1 }, (_, i) => `c${i}`);
+    expect(takeVisibleIds(entries(ids))).toEqual(ids.slice(0, MAX_LIVE_GL_VIEWS));
+    expect(takeVisibleIds(entries(["a", "b", "c"]), 2)).toEqual(["a", "b"]);
   });
 
   test("keeps short lists and ignores a custom cap above length", () => {

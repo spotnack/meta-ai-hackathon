@@ -1,7 +1,6 @@
 // View layer: imports JSX/TSX components.
 
 // React
-import { ScrollView } from "react-native-gesture-handler";
 
 // SafeAreaView
 import { SafeScreenContainer } from "@/shared/ui/safe-area/screen-container";
@@ -30,6 +29,7 @@ import {
   SearchContainer,
   GeneratedShapesContainer,
   TitleContainer,
+  SectionsScrollView,
 } from "./explore.screen.styles";
 
 /**
@@ -68,7 +68,7 @@ function ExploreScreenContent(): React.JSX.Element {
         <SearchContainer>
           <SearchBarComponent />
         </SearchContainer>
-        <ScrollView style={{ flex: 1 }}>
+        <SectionsScrollView>
           <GeneratedShapesContainer>
             {/* Every section gets the same menu rule: only the signed-in user's own items have actions. */}
             <ExploreSectionListComponent
@@ -94,7 +94,7 @@ function ExploreScreenContent(): React.JSX.Element {
               />
             ))}
           </GeneratedShapesContainer>
-        </ScrollView>
+        </SectionsScrollView>
         {renamingAsset && (
           <RenameGeneratedShapeDialogComponent
             currentName={renamingAsset.name}

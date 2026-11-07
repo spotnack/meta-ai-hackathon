@@ -73,11 +73,9 @@ export const RenameGeneratedShapeDialogComponent = ({
             placeholder="Asset name"
             placeholderTextColor={theme.textSecondary}
             selectionColor={LINK_COLOR}
-            style={{
-              color: theme.text,
-              backgroundColor: theme.background,
-              borderColor: `${theme.textSecondary}66`,
-            }}
+            $textColor={theme.text}
+            $backgroundColor={theme.background}
+            $borderColor={`${theme.textSecondary}66`}
             accessibilityLabel="Asset name"
           />
           {error ? <ErrorText accessibilityRole="alert">{error}</ErrorText> : null}
@@ -94,7 +92,7 @@ export const RenameGeneratedShapeDialogComponent = ({
             <ActionButton
               onPress={save}
               disabled={!canSave}
-              style={!canSave && !isSaving ? { opacity: 0.4 } : undefined}
+              $dimmed={!canSave && !isSaving}
               accessibilityRole="button"
               accessibilityState={{ disabled: !canSave, busy: isSaving }}
             >

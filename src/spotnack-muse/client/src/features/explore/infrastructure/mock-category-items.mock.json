@@ -128,25 +128,6 @@
         "bookmarkCount": 0
       }
     ],
-    "beverages": [
-      {
-        "id": "tea_1",
-        "name": "Ulong Tea",
-        "thumbnail": [],
-        "bookmarkCount": 0
-      },
-      {
-        "id": "tea_2",
-        "name": "Black Tea",
-        "thumbnail": [],
-        "bookmarkCount": 0
-      },
-      {
-        "id": "tea_3",
-        "name": "Green Tea",
-        "thumbnail": [],
-        "bookmarkCount": 0
-      }
-    ]
+    "beverages": []
   }
 }

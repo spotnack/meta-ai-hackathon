@@ -1,5 +1,5 @@
 // React Components:
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, Switch } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 // Theme:
@@ -8,6 +8,7 @@ import { useTheme } from "@/hooks/use-theme";
 
 // Custom Components:
 import { BlinkingAnimation } from "@shared/ui/animation/blinking/blinking-animation.component";
+import { ModelNoticeModalComponent } from "../model-notice-modal/model-notice-modal.component";
 
 // Domain:
 import { CONVERSION_STATUS } from "@features/image-to-3d/domain/image-to-3d-conversion.entity";
@@ -15,7 +16,6 @@ import {
   MODEL_STATUS,
   formatBytes,
 } from "@features/image-to-3d/domain/model-management.port";
-import { DEMO_PICKER_COPY } from "@features/image-to-3d/infrastructure/demo-goldens.config";
 
 // Custom Styles:
 import {
@@ -30,6 +30,8 @@ import {
   ImageSizeBadge,
   OnMediaText,
   ImageSizeText,
+  CutoutBadge,
+  CutoutBadgeText,
   ConvertingOverlay,
   ProgressTrack,
   ProgressFill,
@@ -41,7 +43,6 @@ import {
   ConvertGradientBorder,
   ConvertInner,
   ConvertButtonText,
-  cardStyles,
   LINK_COLOR,
   ERROR_COLOR,
   SUCCESS_COLOR,
@@ -68,10 +69,12 @@ export const ImageTo3dCardComponent = ({
   isConverting,
   isCancelling = false,
   canConvert,
-  canPickDemoImage = false,
+  cutout = null,
+  cutoutWorking = false,
+  highDetail = false,
+  setHighDetail = null,
   previewHeight = PREVIEW_MAX_HEIGHT,
   onPickImage,
-  onPickDemoImage,
   onClearImage,
   onConvert,
   onCancelConversion,
@@ -79,19 +82,20 @@ export const ImageTo3dCardComponent = ({
   onOpenSettings,
   modelState = null,
   modelActionError = null,
+  modelActionNotice = null,
   modelsWorking = false,
   needsMeteredConfirm = false,
   onDownloadModels,
   onPauseDownloadModels,
   onVerifyModels,
   onDeleteModels,
+  onDismissModelNotice,
 }) => {
   const theme = useTheme();
   const percent = Math.round((progress?.fraction ?? 0) * 100);
   const isBusy = isPicking || isConverting;
+  const hasImage = Boolean(selectedImage?.uri);
   const hasImageSize = Boolean(selectedImage?.width && selectedImage?.height);
-  // Demo builds: Change cycles the TripoSG goldens.
-  const changeUsesDemo = canPickDemoImage && Boolean(onPickDemoImage);
 
   // On-device model set, when the row is shown (null otherwise).
   const modelStatus = modelState?.status ?? null;
@@ -102,6 +106,9 @@ export const ImageTo3dCardComponent = ({
       ? Math.round((modelState.downloadedBytes / modelState.totalBytes) * 100)
       : 0;
   const modelBusy = modelsWorking || isConverting;
+  // A full SHA-256 check passed in this app session.
+  const modelVerified =
+    modelStatus === MODEL_STATUS.INSTALLED && Boolean(modelState?.fullyVerified);
   const modelLine = (() => {
     switch (modelStatus) {
     case MODEL_STATUS.UNSUPPORTED:
@@ -109,17 +116,17 @@ export const ImageTo3dCardComponent = ({
         modelState.reason ?? "On-device 3D is not supported on this device."
       );
     case MODEL_STATUS.NOT_INSTALLED:
-      return `TripoSG models · ${modelTotal} · not downloaded${modelState.reason ? ` — ${modelState.reason}` : ""}`;
+      return `TripoSG QNN model · ${modelTotal} · not downloaded${modelState.reason ? ` — ${modelState.reason}` : ""}`;
     case MODEL_STATUS.DOWNLOADING:
-      return `Downloading models · ${modelDone} of ${modelTotal} · ${modelPercent}%`;
+      return `Downloading TripoSG QNN model · ${modelDone} of ${modelTotal} · ${modelPercent}%`;
     case MODEL_STATUS.PAUSED:
       return `Download paused · ${modelDone} of ${modelTotal}`;
     case MODEL_STATUS.VERIFYING:
-      return "Verifying models…";
+      return "Verifying TripoSG QNN model…";
     case MODEL_STATUS.INSTALLED:
-      return `TripoSG models · ${modelTotal} · ready`;
+      return `TripoSG QNN model · ${modelTotal} · ready`;
     case MODEL_STATUS.CORRUPT:
-      return `Models corrupt: ${modelState.reason ?? "verification failed"}`;
+      return `TripoSG QNN model corrupt: ${modelState.reason ?? "verification failed"}`;
     default:
       return "";
     }
@@ -135,11 +142,18 @@ export const ImageTo3dCardComponent = ({
   return (
     <Card>
       {selectedImage ? (
-        <PreviewFrame style={{ height: previewHeight }}>
+        <PreviewFrame $height={previewHeight}>
           <PreviewImage
-            source={{ uri: selectedImage.uri }}
-            accessibilityLabel="Selected image preview"
+            source={{ uri: cutout?.uri ?? selectedImage.uri }}
+            accessibilityLabel={
+              cutout ? "Cut-out preview: what the model gets" : "Selected image preview"
+            }
           />
+          {!isBusy && cutout && (
+            <CutoutBadge>
+              <CutoutBadgeText>Cut-out preview</CutoutBadgeText>
+            </CutoutBadge>
+          )}
           {!isBusy && (
             <>
               <ClearButton
@@ -151,14 +165,10 @@ export const ImageTo3dCardComponent = ({
                 <Ionicons name="close" size={18} color={ON_MEDIA_COLOR} />
               </ClearButton>
               <ChangePhotoButton
-                onPress={changeUsesDemo ? onPickDemoImage : onPickImage}
+                onPress={onPickImage}
                 hitSlop={8}
                 accessibilityRole="button"
-                accessibilityLabel={
-                  changeUsesDemo
-                    ? DEMO_PICKER_COPY.changeAccessibilityLabel
-                    : "Choose a different photo"
-                }
+                accessibilityLabel="Choose a different photo"
               >
                 <MaterialCommunityIcons
                   name="image-edit-outline"
@@ -189,7 +199,7 @@ export const ImageTo3dCardComponent = ({
                 {progress?.label || "Starting"}… {percent}%
               </OnMediaText>
               <ProgressTrack>
-                <ProgressFill style={{ width: `${percent}%` }} />
+                <ProgressFill $percent={percent} />
               </ProgressTrack>
             </ConvertingOverlay>
           )}
@@ -199,10 +209,8 @@ export const ImageTo3dCardComponent = ({
           onPress={onPickImage}
           disabled={isPicking}
           activeOpacity={0.75}
-          style={{
-            height: previewHeight,
-            borderColor: `${theme.textSecondary}66`,
-          }}
+          $height={previewHeight}
+          $borderColor={`${theme.textSecondary}66`}
           accessibilityRole="button"
           accessibilityLabel="Choose a photo from your gallery"
           accessibilityState={{ busy: isPicking }}
@@ -222,22 +230,28 @@ export const ImageTo3dCardComponent = ({
           <CenteredText type="small" themeColor="textSecondary">
             Pick a clear shot of a single object from your gallery.
           </CenteredText>
+          <CenteredText type="small" themeColor="textSecondary">
+            Works best with one object, fully in frame, on a plain background.
+          </CenteredText>
         </EmptyPicker>
       )}
 
-      {!selectedImage && changeUsesDemo && (
+      {hasImage && !isConverting && cutoutWorking && (
         <StatusRow>
-          <InlineButton
-            onPress={onPickDemoImage}
-            disabled={isPicking}
-            accessibilityRole="button"
-            accessibilityLabel={DEMO_PICKER_COPY.demoLink}
-          >
-            <MaterialCommunityIcons name="cube-outline" size={16} color={LINK_COLOR} />
-            <LinkText>{DEMO_PICKER_COPY.demoLink}</LinkText>
-          </InlineButton>
+          <ActivityIndicator size="small" color={theme.text} />
+          <StatusText>Checking cut-out…</StatusText>
         </StatusRow>
       )}
+      {hasImage && !isConverting && !cutoutWorking && (cutout?.warnings ?? []).map((warning) => (
+        <StatusRow key={warning.id}>
+          <MaterialCommunityIcons
+            name="alert-outline"
+            size={16}
+            color={theme.text}
+          />
+          <StatusText>{warning.message}</StatusText>
+        </StatusRow>
+      ))}
 
       {modelState && (
         <StatusRow>
@@ -264,7 +278,7 @@ export const ImageTo3dCardComponent = ({
                   onPress={() => onDownloadModels?.()}
                   disabled={modelBusy || !onDownloadModels}
                   accessibilityRole="button"
-                  accessibilityLabel="Download TripoSG models"
+                  accessibilityLabel="Download TripoSG QNN model"
                 >
                   <Ionicons name="download-outline" size={16} color={LINK_COLOR} />
                   <LinkText>Download</LinkText>
@@ -299,7 +313,7 @@ export const ImageTo3dCardComponent = ({
                   onPress={() => onDeleteModels?.()}
                   disabled={modelBusy || !onDeleteModels}
                   accessibilityRole="button"
-                  accessibilityLabel="Delete TripoSG models"
+                  accessibilityLabel="Delete TripoSG QNN model"
                 >
                   <Ionicons name="trash-outline" size={16} color={LINK_COLOR} />
                   <LinkText>Delete</LinkText>
@@ -308,16 +322,24 @@ export const ImageTo3dCardComponent = ({
               {modelStatus === MODEL_STATUS.INSTALLED && (
                 <InlineButton
                   onPress={() => onVerifyModels?.()}
-                  disabled={modelBusy || !onVerifyModels}
+                  // Once a full check passed, the button is only a badge.
+                  disabled={modelVerified || modelBusy || !onVerifyModels}
                   accessibilityRole="button"
-                  accessibilityLabel="Verify TripoSG models"
+                  accessibilityState={{ disabled: modelVerified }}
+                  accessibilityLabel={
+                    modelVerified
+                      ? "TripoSG QNN model verified"
+                      : "Verify TripoSG QNN model"
+                  }
                 >
                   <Ionicons
-                    name="shield-checkmark-outline"
+                    name={modelVerified ? "shield-checkmark" : "shield-checkmark-outline"}
                     size={16}
-                    color={LINK_COLOR}
+                    color={modelVerified ? SUCCESS_COLOR : LINK_COLOR}
                   />
-                  <LinkText>Verify</LinkText>
+                  <LinkText $color={modelVerified ? SUCCESS_COLOR : undefined}>
+                    {modelVerified ? "Verified" : "Verify"}
+                  </LinkText>
                 </InlineButton>
               )}
             </>
@@ -327,7 +349,7 @@ export const ImageTo3dCardComponent = ({
 
       {modelState?.status === MODEL_STATUS.DOWNLOADING && (
         <ProgressTrack>
-          <ProgressFill style={{ width: `${modelPercent}%` }} />
+          <ProgressFill $percent={modelPercent} />
         </ProgressTrack>
       )}
 
@@ -346,17 +368,22 @@ export const ImageTo3dCardComponent = ({
         </StatusRow>
       )}
 
+      <ModelNoticeModalComponent
+        message={modelActionNotice}
+        onDismiss={onDismissModelNotice}
+      />
+
       {modelActionError && (
-        <StatusRow style={cardStyles.errorRow} accessibilityRole="alert">
+        <StatusRow $tone="error" accessibilityRole="alert">
           <Ionicons name="alert-circle-outline" size={18} color={ERROR_COLOR} />
-          <StatusText style={{ color: ERROR_COLOR }}>{modelActionError}</StatusText>
+          <StatusText $isError>{modelActionError}</StatusText>
         </StatusRow>
       )}
 
       {error && (
-        <StatusRow style={cardStyles.errorRow} accessibilityRole="alert">
+        <StatusRow $tone="error" accessibilityRole="alert">
           <Ionicons name="alert-circle-outline" size={18} color={ERROR_COLOR} />
-          <StatusText style={{ color: ERROR_COLOR }}>{error.message}</StatusText>
+          <StatusText $isError>{error.message}</StatusText>
           {error.canOpenSettings && (
             <InlineButton onPress={onOpenSettings} accessibilityRole="button">
               <LinkText>Settings</LinkText>
@@ -366,7 +393,7 @@ export const ImageTo3dCardComponent = ({
       )}
 
       {status === CONVERSION_STATUS.SUCCEEDED && (
-        <StatusRow style={cardStyles.successRow}>
+        <StatusRow $tone="success">
           <Ionicons name="checkmark-circle" size={18} color={SUCCESS_COLOR} />
           <StatusText>Saved to your 3D library</StatusText>
           <InlineButton
@@ -377,6 +404,25 @@ export const ImageTo3dCardComponent = ({
             <LinkText>View</LinkText>
             <Ionicons name="arrow-forward" size={16} color={LINK_COLOR} />
           </InlineButton>
+        </StatusRow>
+      )}
+
+      {/* High-detail extraction (d1 9, 200k display mesh): the full-res
+          mesh keeps the detail and the display mesh shows more of it. Off
+          by default; costs about one to two minutes (75 s measured, more
+          when the phone is warm). */}
+      {hasImage && !isConverting && setHighDetail && (
+        <StatusRow>
+          <StatusText>High detail</StatusText>
+          <ThemedText type="small" themeColor="textSecondary">
+            ≈ +1–2 min
+          </ThemedText>
+          <Switch
+            value={highDetail}
+            onValueChange={setHighDetail}
+            accessibilityRole="switch"
+            accessibilityLabel="High detail extraction"
+          />
         </StatusRow>
       )}
 
@@ -408,7 +454,7 @@ export const ImageTo3dCardComponent = ({
           onPress={onConvert}
           disabled={!canConvert}
           activeOpacity={0.85}
-          style={!canConvert ? cardStyles.disabled : undefined}
+          $dimmed={!canConvert}
           accessibilityRole="button"
           accessibilityLabel="Convert to 3D"
           accessibilityState={{ disabled: !canConvert }}

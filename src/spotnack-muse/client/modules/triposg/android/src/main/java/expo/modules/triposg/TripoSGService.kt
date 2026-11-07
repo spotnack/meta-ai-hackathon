@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
@@ -15,9 +16,10 @@ import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
 
-// Foreground holder for conversions: keeps the process alive and visible
-// while the user leaves the app (HyperOS LMK kills a backgrounded
-// process mid-run otherwise).
+// Foreground holder for conversions and the model download: keeps the
+// process alive and visible while the user leaves the app (HyperOS LMK
+// kills a backgrounded process mid-run otherwise, and cuts a background
+// app's sockets: "Software caused connection abort" mid-download).
 //
 // Type is dataSync: the job is local file processing (photo in, GLB
 // out), which the platform docs list under dataSync. shortService was
@@ -41,6 +43,8 @@ class TripoSGService : Service() {
   companion object {
     const val ACTION_CONVERT = "expo.modules.triposg.action.CONVERT"
     const val ACTION_CANCEL = "expo.modules.triposg.action.CANCEL"
+    const val ACTION_DOWNLOAD = "expo.modules.triposg.action.DOWNLOAD"
+    const val ACTION_PAUSE_DOWNLOAD = "expo.modules.triposg.action.PAUSE_DOWNLOAD"
     const val EXTRA_JOB_ID = "jobId"
     private const val TAG = "TripoSGService"
     private const val NOTIFICATION_ID = 1001
@@ -50,6 +54,9 @@ class TripoSGService : Service() {
   }
 
   private var wakeLock: PowerManager.WakeLock? = null
+  private var wifiLock: WifiManager.WifiLock? = null
+  // True while this service holds the model download, not a conversion.
+  private var downloadMode = false
   private var currentJobId: String? = null
   private var foregroundStarted = false
 
@@ -87,7 +94,26 @@ class TripoSGService : Service() {
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     when (intent?.action) {
+      ACTION_DOWNLOAD -> {
+        downloadMode = true
+        currentJobId = "download"
+        lastLabel = null
+        lastPercent = -1
+        lastPostMs = 0L
+        builder = newBuilder()
+        post("Starting…", 0.0, force = true)
+        acquireWakeLock()
+        acquireWifiLock()
+        notifHandler.removeCallbacks(poll)
+        notifHandler.post(poll)
+      }
+      ACTION_PAUSE_DOWNLOAD -> {
+        Log.i(TAG, "notification Pause for the model download")
+        post("Pausing…", TripoSGJobs.downloadSnapshot?.first ?: 0.0, force = true)
+        TripoSGActiveModule.module?.pauseModelDownload()
+      }
       ACTION_CONVERT -> {
+        downloadMode = false
         currentJobId = intent.getStringExtra(EXTRA_JOB_ID)
         lastLabel = null
         lastPercent = -1
@@ -112,6 +138,7 @@ class TripoSGService : Service() {
   override fun onDestroy() {
     notifHandler.removeCallbacks(poll)
     releaseWakeLock()
+    releaseWifiLock()
     try {
       notifThread.quitSafely()
     } catch (e: Exception) {
@@ -124,6 +151,11 @@ class TripoSGService : Service() {
   }
 
   private fun tick() {
+    if (downloadMode) {
+      // The module stops the service when the download ends.
+      TripoSGJobs.downloadSnapshot?.let { post(it.second, it.first, force = false) }
+      return
+    }
     val snapshot = TripoSGJobs.progressSnapshot
     if (snapshot != null) {
       post(snapshot.second, snapshot.first, force = false)
@@ -172,11 +204,12 @@ class TripoSGService : Service() {
   }
 
   private fun newBuilder(): Notification.Builder {
-    val cancelIntent = Intent(this, TripoSGService::class.java)
-      .setAction(ACTION_CANCEL)
+    // Convert: Cancel the job. Download: Pause it (Resume from the app).
+    val stopIntent = Intent(this, TripoSGService::class.java)
+      .setAction(if (downloadMode) ACTION_PAUSE_DOWNLOAD else ACTION_CANCEL)
       .putExtra(EXTRA_JOB_ID, currentJobId)
-    val cancelAction = PendingIntent.getService(
-      this, 0, cancelIntent,
+    val stopAction = PendingIntent.getService(
+      this, 0, stopIntent,
       PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     )
     val openApp = packageManager.getLaunchIntentForPackage(packageName)?.let {
@@ -191,11 +224,16 @@ class TripoSGService : Service() {
       @Suppress("DEPRECATION")
       Notification.Builder(this)
     }
-    fresh.setContentTitle("Generating 3D model")
+    fresh.setContentTitle(
+      if (downloadMode) "Downloading TripoSG QNN model" else "Generating 3D model"
+    )
       .setSmallIcon(android.R.drawable.stat_sys_download)
       .setOngoing(true)
       .addAction(
-        android.R.drawable.ic_menu_close_clear_cancel, "Cancel", cancelAction
+        if (downloadMode) android.R.drawable.ic_media_pause
+        else android.R.drawable.ic_menu_close_clear_cancel,
+        if (downloadMode) "Pause" else "Cancel",
+        stopAction
       )
     if (openApp != null) fresh.setContentIntent(openApp)
     return fresh
@@ -223,6 +261,30 @@ class TripoSGService : Service() {
     }
   }
 
+  // Keeps Wi-Fi at full power with the screen off during the download.
+  private fun acquireWifiLock() {
+    try {
+      val wifi = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
+      @Suppress("DEPRECATION")
+      wifiLock = wifi.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "TripoSG:download")
+        .apply {
+          setReferenceCounted(false)
+          acquire()
+        }
+    } catch (e: Exception) {
+      Log.w(TAG, "wifi lock acquire failed: ${e.message}")
+    }
+  }
+
+  private fun releaseWifiLock() {
+    try {
+      if (wifiLock?.isHeld == true) wifiLock?.release()
+    } catch (e: Exception) {
+      Log.w(TAG, "wifi lock release failed: ${e.message}")
+    }
+    wifiLock = null
+  }
+
   private fun releaseWakeLock() {
     try {
       if (wakeLock?.isHeld == true) wakeLock?.release()
@@ -233,7 +295,8 @@ class TripoSGService : Service() {
   }
 }
 
-// Live module instance for service callbacks (Cancel). Set on convert;
+// Live module instance for service callbacks (Cancel, Pause). Set on
+// convert and on download;
 // the object outlives JS reloads, so notification Cancel keeps working
 // with dead JS — the engine thread and its terminal path do too.
 internal object TripoSGActiveModule {

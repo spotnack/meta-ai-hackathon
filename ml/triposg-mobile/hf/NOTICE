@@ -1,0 +1,31 @@
+TripoSG for Snapdragon 8 Elite (QNN, on-device)
+
+This model set is a conversion of TripoSG (https://github.com/VAST-AI-Research/TripoSG,
+commit fc5c40990181e2a756c4e0b1c2f4d6b5202faf8c; weights VAST-AI/TripoSG revision
+2c1c516d22d58db486a058d98d31bb6177344e06), MIT License, Copyright (c) 2025
+VAST-AI-Research and contributors. The weights were exported to ONNX and the
+transformer and VAE decoder were compiled with Qualcomm AI Hub into QNN context binaries.
+
+u2net.onnx: U-2-Net (https://github.com/xuebinqin/U-2-Net) by Xuebin Qin et al.,
+Apache License 2.0 (see LICENSE-u2net). The file is the unmodified u2net.onnx from
+the rembg release (https://github.com/danielgatis/rembg), SHA-256
+8d10d2f3bb75ae3b6d527c77944fc5e7dcd94b29809d47a739a7a728a912b491.
+
+The TripoSG NOTICE follows, reproduced in full.
+
+-------------------------------------------------------------------------------
+TripoSG
+Copyright (c) 2025 VAST-AI-Research and contributors
+
+This project includes code from the following open source projects:
+
+RMBG
+Copyright (c) BRIA AI
+License: bria-rmbg-1.4
+Source: https://huggingface.co/briaai/RMBG-1.4
+
+This software contains code derived from 🤗 Diffusers (https://github.com/huggingface/diffusers), available under the Apache License 2.0.
+
+This software contains code derived from HunyuanDiT (https://github.com/Tencent/HunyuanDiT). Notice: Tencent Hunyuan is licensed under the Tencent Hunyuan Community License Agreement, Copyright © 2024 Tencent. All Rights Reserved. The trademark rights of “Tencent Hunyuan” are owned by Tencent or its affiliate.
+
+This software contains code derived from FlashVDM (https://github.com/Tencent/FlashVDM). Notice: Tencent Hunyuan FlashVDM is licensed under the Tencent Hunyuan FlashVDM  Community License Agreement, Copyright © 2025 Tencent. All Rights Reserved. The trademark rights of “Tencent Hunyuan” are owned by Tencent or its affiliate.

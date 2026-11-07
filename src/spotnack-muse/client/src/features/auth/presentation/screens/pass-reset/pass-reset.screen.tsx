@@ -15,7 +15,6 @@ import {
   LinkText,
   ErrorText,
   FieldErrorText,
-  INPUT_ERROR_STYLE,
 } from "./pass-reset.screen.styles";
 import { usePassResetViewModel } from "./pass-reset.screen.view-model";
 
@@ -40,7 +39,7 @@ export function ForgotPasswordScreen() {
           {vm.step === "request" ? (
             <>
               <StyledInput
-                style={vm.fieldErrors.email ? INPUT_ERROR_STYLE : undefined}
+                $hasError={Boolean(vm.fieldErrors.email)}
                 placeholder="E-mail"
                 value={vm.email}
                 onChangeText={vm.setEmail}
@@ -55,7 +54,7 @@ export function ForgotPasswordScreen() {
           ) : (
             <>
               <StyledInput
-                style={vm.fieldErrors.code ? INPUT_ERROR_STYLE : undefined}
+                $hasError={Boolean(vm.fieldErrors.code)}
                 placeholder="6-digit code"
                 value={vm.code}
                 onChangeText={vm.setCode}
@@ -66,7 +65,7 @@ export function ForgotPasswordScreen() {
                 <FieldErrorText>{vm.fieldErrors.code}</FieldErrorText>
               ) : null}
               <StyledInput
-                style={vm.fieldErrors.password ? INPUT_ERROR_STYLE : undefined}
+                $hasError={Boolean(vm.fieldErrors.password)}
                 placeholder="New password"
                 value={vm.password}
                 onChangeText={vm.setPassword}

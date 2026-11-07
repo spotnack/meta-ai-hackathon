@@ -1,6 +1,5 @@
 // React
 import { useMemo } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 // Expo
 import { Ionicons } from "@expo/vector-icons";
@@ -23,7 +22,9 @@ import {
   BackButton,
   CanvasContainer,
   NameFooter,
-  stageStyles,
+  NameText,
+  SafeArea,
+  STAGE_BACKGROUND,
   BACK_ICON_COLOR,
   BACK_ICON_SIZE,
 } from "./stage-3d.screen.styles";
@@ -41,7 +42,7 @@ export const Stage3dScreen = () => {
 
   return (
     <Stage3dContainer>
-      <SafeAreaView style={stageStyles.safeArea}>
+      <SafeArea>
         <HeaderRow>
           <BackButton onPress={() => router.back()}>
             <Ionicons
@@ -58,9 +59,9 @@ export const Stage3dScreen = () => {
             // with a message instead of crashing.
             <GlbModelViewer
               uri={modelUri}
-              canvas={stageStyles.canvas}
+              fill
               scaleFactor={0.6}
-              background={stageStyles.background}
+              background={STAGE_BACKGROUND}
               showShadows
               photoUri={item?.photos?.[0] ?? null}
               fallbackCaption="3D preview isn't available right now. Your model is safe — try opening it again."
@@ -69,7 +70,8 @@ export const Stage3dScreen = () => {
             // The user's own creations have no 3D model until the AI pipeline generates one.
             <ModelPlaceholderComponent
               photoUri={item?.photos?.[0]}
-              style={stageStyles.placeholder}
+              fill
+              background={STAGE_BACKGROUND}
               iconSize={72}
               caption="No 3D model yet. It will appear here once it has been generated."
             />
@@ -77,15 +79,13 @@ export const Stage3dScreen = () => {
         </CanvasContainer>
         {item?.name && (
           <NameFooter>
-            <ThemedText type="subtitle" style={stageStyles.nameText}>
-              {item.name}
-            </ThemedText>
+            <NameText>{item.name}</NameText>
             {item?.demoAttribution ? (
               <ThemedText type="small">{item.demoAttribution}</ThemedText>
             ) : null}
           </NameFooter>
         )}
-      </SafeAreaView>
+      </SafeArea>
     </Stage3dContainer>
   );
 };

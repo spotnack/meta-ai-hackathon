@@ -1,21 +1,15 @@
 <div align='center'>
-  <h1> AI Pipeline </h1>
+  <h1> AI Pipeline Logs </h1>
 </div>
 
 # Table of Contents
 
-- [On-Device AI Inference Pipeline](#on-device-ai-inference-pipeline)
 - [Phase 0 Audit (checkpoint)](#phase-0-audit-checkpoint)
 - [Phase 1: Reference and Parity Method](#phase-1-reference-and-parity-method)
 - [Phase 2: Runtime Evaluation and Decision](#phase-2-runtime-evaluation-and-decision)
-
----
-
-# On-Device AI Inference Pipeline
-
-Placeholder for the full pipeline doc. Phase 0 (audit) below is the only
-filled section. Later phases will append: desktop reference, runtime decision,
-final configuration, model management, benchmarks, limitations, licenses.
+- [Phase 3: Native Implementation (part A — engine + module)](#phase-3-native-implementation-part-a--engine--module)
+- [Phase 3: Native Implementation (part B — app integration)](#phase-3-native-implementation-part-b--app-integration)
+- [Phase 4: App Polish, Benchmarks, Docs](#phase-4-app-polish-benchmarks-docs)
 
 ---
 
@@ -24,25 +18,25 @@ final configuration, model management, benchmarks, limitations, licenses.
 Status: audit ready for your review; not committed (you will commit).
 Do not start Phase 1 until you approve (per `ai_pipeline_prompt.md` §4).
 No code, installs, weight downloads, or commits were done in this turn.
-No measurements were taken, so nothing below is labeled *measured*.
+No measurements were taken, so nothing below is labeled _measured_.
 
-Label key: *documented* = an inspected source states it (linked); *unverified*
+Label key: _documented_ = an inspected source states it (linked); _unverified_
 = neither measured nor documented, needs an experiment or source in Phase 1/2.
 
 ## 1. Real inference graph (source-checked)
 
-| # | Prompt claim | Verdict + source (inspected this turn) | Label |
-| --- | --- | --- | --- |
-| 1 | Rectified-flow transformer, ≈1.5B params | Confirmed. README Updates: "Release of TripoSG 1.5B parameter rectified flow model and VAE trained on 2048 latent tokens" | *documented* ([README](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/README.md)) |
-| 2 | Shapes use 2,048 latent tokens | Confirmed (same README line). Pipeline `prepare_latents` builds `(batch, num_tokens, in_channels)` | *documented* ([README](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/README.md), [pipeline](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/triposg/pipelines/pipeline_triposg.py)) |
-| 3 | Image conditioning is a pretrained vision encoder, reportedly DINOv2-class | Confirmed as DINOv2 itself. Pipeline imports `Dinov2Model, BitImageProcessor` and `encode_image` uses `image_encoder_dinov2(...).last_hidden_state`; acknowledgements thank DINOv2 | *documented* ([pipeline](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/triposg/pipelines/pipeline_triposg.py), [README](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/README.md)) |
-| 4 | CLIP + DINOv2 dual conditioning | Partially confirmed only. A secondary summary of the paper mentions "CLIP-DINOv2 dual-conditioning", but the inspected pipeline file shows DINOv2. Whether CLIP also feeds the transformer needs a transformer-config read in Phase 1 | *unverified* |
-| 5 | Preprocessing may include a background-removal model | Confirmed: `briaai/RMBG-1.4`. `run_triposg` calls `prepare_image(image, white bg, rmbg_net)` with `BriaRMBG.from_pretrained(RMBG-1.4)`; README auto-downloads it to `pretrained_weights/RMBG-1.4` | *documented* ([inference script](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/scripts/inference_triposg.py), [README](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/README.md)) |
-| 6 | VAE decodes latents into SDF/occupancy; mesh extraction → triangles | Confirmed SDF (not occupancy). README: "Advanced VAE Architecture: Uses Signed Distance Functions (SDFs) with hybrid supervision (SDF + normal + eikonal)"; pipeline decodes via `vae.decode(latents, sampled_points).sample` through `hierarchical_extract_geometry` or `set_flash_decoder`/`flash_extract_geometry`, then `trimesh.Trimesh(v, f)`; optional decimation via pymeshlab quadric-edge-collapse (`--faces`) | *documented* ([README](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/README.md), [pipeline](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/triposg/pipelines/pipeline_triposg.py), [inference script](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/scripts/inference_triposg.py)) |
-| 7 | Sampling defaults: steps, guidance, CFG doubles batch | Confirmed. Defaults `num_inference_steps=50`, `guidance_scale=7.0`, `seed=42`, `device=cuda`, `dtype=float16`; `do_classifier_free_guidance = guidance_scale > 1`; guided path does `torch.cat([latents] * 2)` then `chunk(2)` guidance | *documented* ([inference script](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/scripts/inference_triposg.py), [pipeline](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/triposg/pipelines/pipeline_triposg.py)) |
-| 8 | Scheduler | FlowMatchEulerDiscreteScheduler (`FlowMatchEulerDiscreteScheduler` import in pipeline) | *documented* ([pipeline](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/triposg/pipelines/pipeline_triposg.py)) |
-| 9 | GPU requirement ≈8 GB VRAM | Confirmed. README System Requirements: "CUDA-enabled GPU with at least 8GB VRAM" | *documented* ([README](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/README.md)) |
-| 10 | 4B MoE / 4096-token scaling variant | Paper describes MoE scaling per the prompt; README advertises a separate CFG-distilled 512-token scribble model, not the ship target. Ship target stays the 1.5B/2048 model unless evidence forces a change request | *documented* (prompt §2 + paper [abs](https://arxiv.org/abs/2502.06608)/[html](https://arxiv.org/html/2502.06608v3)); MoE details *unverified* pending paper §3.2 read in Phase 1 |
+| #   | Prompt claim                                                               | Verdict + source (inspected this turn)                                                                                                                                                                                                                                                                                                                                                                                   | Label                                                                                                                                                                                                                                                                                                                                   |
+| --- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Rectified-flow transformer, ≈1.5B params                                   | Confirmed. README Updates: "Release of TripoSG 1.5B parameter rectified flow model and VAE trained on 2048 latent tokens"                                                                                                                                                                                                                                                                                                | _documented_ ([README](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/README.md))                                                                                                                                                                                                                                      |
+| 2   | Shapes use 2,048 latent tokens                                             | Confirmed (same README line). Pipeline `prepare_latents` builds `(batch, num_tokens, in_channels)`                                                                                                                                                                                                                                                                                                                       | _documented_ ([README](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/README.md), [pipeline](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/triposg/pipelines/pipeline_triposg.py))                                                                                                                   |
+| 3   | Image conditioning is a pretrained vision encoder, reportedly DINOv2-class | Confirmed as DINOv2 itself. Pipeline imports `Dinov2Model, BitImageProcessor` and `encode_image` uses `image_encoder_dinov2(...).last_hidden_state`; acknowledgements thank DINOv2                                                                                                                                                                                                                                       | _documented_ ([pipeline](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/triposg/pipelines/pipeline_triposg.py), [README](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/README.md))                                                                                                                   |
+| 4   | CLIP + DINOv2 dual conditioning                                            | Partially confirmed only. A secondary summary of the paper mentions "CLIP-DINOv2 dual-conditioning", but the inspected pipeline file shows DINOv2. Whether CLIP also feeds the transformer needs a transformer-config read in Phase 1                                                                                                                                                                                    | _unverified_                                                                                                                                                                                                                                                                                                                            |
+| 5   | Preprocessing may include a background-removal model                       | Confirmed: `briaai/RMBG-1.4`. `run_triposg` calls `prepare_image(image, white bg, rmbg_net)` with `BriaRMBG.from_pretrained(RMBG-1.4)`; README auto-downloads it to `pretrained_weights/RMBG-1.4`                                                                                                                                                                                                                        | _documented_ ([inference script](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/scripts/inference_triposg.py), [README](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/README.md))                                                                                                                    |
+| 6   | VAE decodes latents into SDF/occupancy; mesh extraction → triangles        | Confirmed SDF (not occupancy). README: "Advanced VAE Architecture: Uses Signed Distance Functions (SDFs) with hybrid supervision (SDF + normal + eikonal)"; pipeline decodes via `vae.decode(latents, sampled_points).sample` through `hierarchical_extract_geometry` or `set_flash_decoder`/`flash_extract_geometry`, then `trimesh.Trimesh(v, f)`; optional decimation via pymeshlab quadric-edge-collapse (`--faces`) | _documented_ ([README](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/README.md), [pipeline](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/triposg/pipelines/pipeline_triposg.py), [inference script](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/scripts/inference_triposg.py)) |
+| 7   | Sampling defaults: steps, guidance, CFG doubles batch                      | Confirmed. Defaults `num_inference_steps=50`, `guidance_scale=7.0`, `seed=42`, `device=cuda`, `dtype=float16`; `do_classifier_free_guidance = guidance_scale > 1`; guided path does `torch.cat([latents] * 2)` then `chunk(2)` guidance                                                                                                                                                                                  | _documented_ ([inference script](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/scripts/inference_triposg.py), [pipeline](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/triposg/pipelines/pipeline_triposg.py))                                                                                      |
+| 8   | Scheduler                                                                  | FlowMatchEulerDiscreteScheduler (`FlowMatchEulerDiscreteScheduler` import in pipeline)                                                                                                                                                                                                                                                                                                                                   | _documented_ ([pipeline](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/triposg/pipelines/pipeline_triposg.py))                                                                                                                                                                                                        |
+| 9   | GPU requirement ≈8 GB VRAM                                                 | Confirmed. README System Requirements: "CUDA-enabled GPU with at least 8GB VRAM"                                                                                                                                                                                                                                                                                                                                         | _documented_ ([README](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/README.md))                                                                                                                                                                                                                                      |
+| 10  | 4B MoE / 4096-token scaling variant                                        | Paper describes MoE scaling per the prompt; README advertises a separate CFG-distilled 512-token scribble model, not the ship target. Ship target stays the 1.5B/2048 model unless evidence forces a change request                                                                                                                                                                                                      | _documented_ (prompt §2 + paper [abs](https://arxiv.org/abs/2502.06608)/[html](https://arxiv.org/html/2502.06608v3)); MoE details _unverified_ pending paper §3.2 read in Phase 1                                                                                                                                                       |
 
 Exact component shapes, dtypes, and per-component parameter counts (transformer
 vs. DINOv2 variant vs. VAE vs. RMBG) were not extracted this turn: they need
@@ -51,19 +45,19 @@ is Phase 1 work on a GPU machine. Do not quote them until then.
 
 ## 2. Licenses (ship-blockers flagged)
 
-| Artifact | License (inspected) | What it means for us | Label |
-| --- | --- | --- | --- |
-| TripoSG code | MIT, ©2025 VAST-AI-Research | Ship/modify/convert OK with notice | *documented* ([LICENSE](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/LICENSE)) |
-| TripoSG weights (`VAST-AI/TripoSG`) | Page shows `License: mit` | Redistribution from our own host looks allowed, but re-verify the model-card license file (not just the code LICENSE) before hosting anything. Hosting stays undecided per your answer | *documented* ([model page](https://huggingface.co/VAST-AI/TripoSG)); redistribution *unverified* until card-file check in Phase 1 |
-| RMBG-1.4 (`briaai/RMBG-1.4`) | `bria-rmbg-1.4`: source-available, non-commercial (CC non-commercial); commercial use needs a BRIA agreement | SHIP-BLOCKER for a commercial app: bundling or re-hosting RMBG weights, and background removal as a pipeline stage, needs a BRIA commercial agreement or a maintainer-approved license-clean replacement for that stage only (not a TripoSG swap). Do not choose hosting or a replacement without your approval | *documented* ([model page](https://huggingface.co/briaai/RMBG-1.4)) |
-| Deps to re-check in Phase 2 | `diffusers`, `transformers` (permissive upstream); `pymeshlab` (copyleft risk: avoid bundling; use custom C++/GLB writer on device) | Keep decimation out of the app via pymeshlab; confirm runtime licenses (LiteRT/ORT/Core ML/ExecuTorch) in the Phase 2 matrix | *unverified* |
+| Artifact                            | License (inspected)                                                                                                                 | What it means for us                                                                                                                                                                                                                                                                                            | Label                                                                                                                             |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| TripoSG code                        | MIT, ©2025 VAST-AI-Research                                                                                                         | Ship/modify/convert OK with notice                                                                                                                                                                                                                                                                              | _documented_ ([LICENSE](https://raw.githubusercontent.com/VAST-AI-Research/TripoSG/main/LICENSE))                                 |
+| TripoSG weights (`VAST-AI/TripoSG`) | Page shows `License: mit`                                                                                                           | Redistribution from our own host looks allowed, but re-verify the model-card license file (not just the code LICENSE) before hosting anything. Hosting stays undecided per your answer                                                                                                                          | _documented_ ([model page](https://huggingface.co/VAST-AI/TripoSG)); redistribution _unverified_ until card-file check in Phase 1 |
+| RMBG-1.4 (`briaai/RMBG-1.4`)        | `bria-rmbg-1.4`: source-available, non-commercial (CC non-commercial); commercial use needs a BRIA agreement                        | SHIP-BLOCKER for a commercial app: bundling or re-hosting RMBG weights, and background removal as a pipeline stage, needs a BRIA commercial agreement or a maintainer-approved license-clean replacement for that stage only (not a TripoSG swap). Do not choose hosting or a replacement without your approval | _documented_ ([model page](https://huggingface.co/briaai/RMBG-1.4))                                                               |
+| Deps to re-check in Phase 2         | `diffusers`, `transformers` (permissive upstream); `pymeshlab` (copyleft risk: avoid bundling; use custom C++/GLB writer on device) | Keep decimation out of the app via pymeshlab; confirm runtime licenses (LiteRT/ORT/Core ML/ExecuTorch) in the Phase 2 matrix                                                                                                                                                                                    | _unverified_                                                                                                                      |
 
 ## 3. Memory and storage budget
 
 Computed (arithmetic, not measured): 1.5B params ≈ 3.0 GB FP16 / 1.5 GB INT8 /
 0.75 GB INT4-weight-only, before the DINOv2 encoder, VAE decoder, RMBG stage,
 activations, attention/KV buffers at 2,048 tokens, and the extraction grid.
-*Unverified*: exact encoder/VAE/RMBG sizes, activation peaks, and octree-grid
+_Unverified_: exact encoder/VAE/RMBG sizes, activation peaks, and octree-grid
 costs need configs + on-device measurement (`phys_footprint` /
 `VmHWM` / `dumpsys meminfo`) in Phase 2.
 
@@ -174,7 +168,7 @@ Order of work (spike first):
    its 6.5 s / 2.4 GB numbers are discarded (see §9). Re-run done: the
    224-px result is below (median 1084 ms, cosine 1.0000001).
    Transformer sizing (config + file list inspected, no download):
-   `TripoSGDiTModel`, width 2048, 21 layers, 16 heads, in_channels 64,
+   `TripoSGDiTModel`, width 2048, 21 layers, 16 heads, in*channels 64,
    cross_attention_dim 1024; weight file
    `transformer/diffusion_pytorch_model.safetensors` is 5758280104 bytes
    (≈5.36 GiB FP32). One guided step doubles the batch, so activations run
@@ -198,14 +192,14 @@ Order of work (spike first):
    report back. Export command for your terminal (after closing Chrome and
    other VS Code windows, transformer download finished):
    `~/anaconda3/envs/triposg-spike/bin/python
-   ml/triposg-mobile/bench/spike_transformer_export.py` from the repo root.
+ml/triposg-mobile/bench/spike_transformer_export.py` from the repo root.
    Export fixes (your five, applied): repo cloned at pinned fc5c4099 into
    `~/.cache/triposg/TripoSG` on sys.path (no setup.py, so no pip git
    install); `diffusers==0.30.3` + `einops` installed in the env;
    meta-device `from_config(load_config(...))`; float32 timestep 1000.0
    (step 0 on the RectifiedFlowScheduler 1000→≈20 scale, matching your
    Colab step0 goldens); no CPU FP16 baseline forward (no FP16 math on
-   the laptop) — parity comes from your Colab step0_*.npy, whose exact
+   the laptop) — parity comes from your Colab step0*\*.npy, whose exact
    inputs the phone runs. Smoke first: `--smoke` builds a 2-layer/256-wide
    random config, traces, and re-runs it in ORT before the big export.
    QNN AAR (`onnxruntime-android-qnn` 1.22.0, Maven): 6796460 bytes
@@ -225,7 +219,7 @@ Order of work (spike first):
    `ml/triposg-mobile/pretrained_weights/` (git-ignored).
    Env (approved, you run it outside the sandbox — conda has no writable
    dirs or pkgs cache inside it): `conda create -n triposg-spike
-   python=3.10`, then CPU-only torch plus transformers, onnx, onnxruntime,
+python=3.10`, then CPU-only torch plus transformers, onnx, onnxruntime,
    flake8. Measured wheel sizes: onnxruntime 1.22.0 cp310 ≈15.6 MiB, onnx
    1.23.2 cp310 ≈8.5 MiB, transformers ≈12.4 MiB; torch 2.5.1+cpu and the
    conda python env are estimates (≈190 MiB and ≈150–250 MiB), pip/conda
@@ -296,7 +290,7 @@ review both checkpoints; no commits from me.
 ## 9. Recommended demo path for 10:00 (04:00 report, corrected for 224px)
 
 Correction: TripoSG's DINOv2 input is 224×224 → 257 tokens (preprocessor
-crop_size; golden pixel_values (1,3,224,224)), not 518 → 1370. The 6.5 s
+crop*size; golden pixel_values (1,3,224,224)), not 518 → 1370. The 6.5 s
 number measured a 5× larger input and is discarded; the encoder was
 re-exported at 224 and verified against `dinov2_last_hidden_state.npy`
 (ONNX-vs-golden 7.70e-05, torch-vs-golden 4.20e-05).
@@ -305,12 +299,12 @@ memory — the cost level the on-device path must undercut per step.
 Transformer spike now runs on golden step-0 inputs (latent (2,2048,64),
 timestep [1000,1000] float32, enc (2,257,1024) with zero uncond row);
 phone output is checked against `step0_noise_pred.npy`. Old random
-`dit_spike_*.npy` inputs are deleted.
+`dit_spike*\*.npy`inputs are deleted.
 Given the goldens exist and the transformer export has not completed: demo
 the proven chain on the Xiaomi — pre-cut RGBA input → on-device DINOv2
 encoder at 224 (current result: median 1084.1 ms, p90 1110.0 ms, 5 runs +
 2 warm-ups, peak VmHWM 2467560 kB against 6.6 GB available, thermal 0→0;
-parity vs `dinov2_last_hidden_state.npy`: max abs 6.03e-05, mean abs
+parity vs`dinov2_last_hidden_state.npy`: max abs 6.03e-05, mean abs
 2.97e-06, relative L2 2.79e-06, cosine 1.0000001; log
 `logs/spike/phone_bench_dinov2_224.log`) → report the number
 live — and frame everything after the encoder as measured-next-steps, not
@@ -325,6 +319,7 @@ FP16 export FAILED on the laptop (your watchdog, 06:09:58, after 61 min):
 peak RSS 9848728 kB (≈9.4 GiB, above the ≈5–7 estimate — the trace holds
 more than modeled), free memory down to 1.55 GB, no output written, and
 stdout was buffered so nothing was visible (use `python -u` next time).
+
 > Update (Phase 2, supersedes this whole demo-time block): the
 > transformer export did run on the laptop — as 23 batch-1 FP32 units via
 > split export, no cloud machine — and the full on-device pipeline now
@@ -468,9 +463,9 @@ kills the app:
   247 MB per block) plus ~130–150 MB of per-session scratch/I-O buffers.
   VAE adds ~0.8 GB → app total ≈ 9.8 GB.
 - HyperOS kills the app mid-run: `am_kill … stop com.spotnackmuse.ondevice
-  due to used too many dmabuf resource, dmabuf used rss:9842572kb, dmabuf
-  threshold:1572864kb` (adj 0, while loading); lmkd logs `thrashing
-  (74%)`, `critical pressure`, dozens of kills per minute.
+due to used too many dmabuf resource, dmabuf used rss:9842572kb, dmabuf
+threshold:1572864kb` (adj 0, while loading); lmkd logs `thrashing
+(74%)`, `critical pressure`, dozens of kills per minute.
 - Probe (`bench/aihub_memory_probe.py`, `logs/spike/memprobe/`): forcing
   `default_graph_htp_precision=FLOAT16` gives byte-identical 247 MB bins
   (no gain); linking 3 blocks with `qnn_dlc` + `submit_link_job` works,
@@ -492,13 +487,13 @@ and total DMA-BUF from ~9 GB toward ≲ 3 GB:
 - `bench/aihub_compile.py --variant w8a16` → `logs/spike/aihub_w8a16/`
   (same QAIRT 2.50 / S25 / precompiled_qnn_onnx; ~70 MB uploads).
 - Phone: `spike_adb_chain_npu.sh AIHUB=.../aihub_w8a16
-  REMOTE=/data/local/tmp/triposg-chain-w8a16` (step-0 parity),
+REMOTE=/data/local/tmp/triposg-chain-w8a16` (step-0 parity),
   `bench/spike_adb_dmabuf.sh` (before/after DMA-BUF),
   `spike_adb_pipeline.sh ID=<golden> REMOTE=<same>` (mesh parity 5/5,
   same gate as today: 50 steps, CFG 7, d0=6, d1=8).
 - Release: `make_model_manifest.py --version v2-w8a16-50step
-  --aihub-manifest .../aihub_w8a16/manifest_w8a16.json --out
-  .../models_manifest_w8a16.json --js-out <bundled manifest>`; sideload
+--aihub-manifest .../aihub_w8a16/manifest_w8a16.json --out
+.../models_manifest_w8a16.json --js-out <bundled manifest>`; sideload
   with `VERSION=v2-w8a16-50step AIHUB=... MANIFEST=...`. The app needs no
   code change: the native side picks the newest version dir holding a
   manifest, and the JS version comes from the manifest data.
@@ -529,13 +524,21 @@ have no match.
 
 On-device (spike_bench, cond row, step 0):
 
-| Variant | Peak DMA-BUF | Row pass | Parity |
-|---|---|---|---|
-| FP32, 23 sessions (shipping) | ~9.0 GB (+VAE) | 2.07 s | baseline |
-| **FP32 merged (`logs/spike/merged/fp32`)** | **7.14 GB** | **1.48–1.69 s** | **bit-identical (max abs 0.0)** |
-| w8a16 mixed, merged | 6.67 GB | 2.73 s | rel_l2 1.0e-2; not worth it |
+| Variant                                    | Peak DMA-BUF   | Row pass        | Parity                          |
+| ------------------------------------------ | -------------- | --------------- | ------------------------------- |
+| FP32, 23 sessions (shipping)               | ~9.0 GB (+VAE) | 2.07 s          | baseline                        |
+| **FP32 merged (`logs/spike/merged/fp32`)** | **7.14 GB**    | **1.48–1.69 s** | **bit-identical (max abs 0.0)** |
+| w8a16 mixed, merged                        | 6.67 GB        | 2.73 s          | rel_l2 1.0e-2; not worth it     |
 
 Session create is ~6.8 s for the whole merged chain.
+
+In the app (release on-device build, figurine photo, Xiaomi 15 Ultra):
+
+| Metric                           | 23 sessions (before) | One merged session                         |
+| -------------------------------- | -------------------- | ------------------------------------------ |
+| Lowest MemAvailable during a run | ≈1.1 GB              | ≈2.0 GB, ≈2.6 GB while sampling            |
+| Background apps killed per run   | ≈100–120             | 0 (Spotify and YouTube Music kept running) |
+| Full conversion                  | ≈191 s               | ≈176 s                                     |
 
 Why not w8a16 / FP16: quantized blocks shrink weights to 70 MB, but
 their runlist grows to 133 MB (vs 10 MB) and their spill-fill to
@@ -625,8 +628,8 @@ Partial outputs use temp names + rename; cancel deletes them.
 
 # Phase 3: Native Implementation (part B — app integration)
 
-Status: written, not yet built on-device (needs `npx expo prebuild -p
-android` + Gradle release + the checks below).
+Status: built and measured on-device; see Phase 4 for the numbers
+(release build, merged session, `v2-fp32-merged-50step` models).
 
 ## Adapter + hook swap
 
@@ -643,14 +646,13 @@ android` + Gradle release + the checks below).
   placeholder so the workflow keeps working, and the model-status row
   carries the reason.
 - `EXPO_PUBLIC_IMAGE_TO_3D_MODE=ondevice` sends gallery photos to the
-  TripoSG adapter; demo goldens keep their adapter in every mode
-  (`eas.json` gains an `ondevice` profile: APK, internal,
+  TripoSG adapter (`eas.json` gains an `ondevice` profile: APK, internal,
   `APP_VARIANT=ondevice`, ondevice + demo-auth env).
 
 ## Model management
 
 - `domain/model-management.port.js` + `infrastructure/
-  model-management.adapter.js`: states not-installed / downloading
+model-management.adapter.js`: states not-installed / downloading
   (bytes, fraction) / paused / verifying / installed / corrupt /
   unsupported. State is derived from the device on every read (no
   cached state), so a restart lands in PAUSED (partials on disk),
@@ -720,8 +722,8 @@ Opening Explore ~25 s into a conversion (NPU sessions loading,
 MemAvailable ≈ 1.1 GB) killed the app: `JavascriptException: Error: GL
 is currently not available`, and the conversion — same process, foreground
 service and all — died with it. Mechanism: expo-gl's `GLView` throws
-`CodedError(ERR_GL_NOT_AVAILABLE)` from its `_onSurfaceCreate` *event
-handler* when the native context cannot be created (memory pressure, or
+`CodedError(ERR_GL_NOT_AVAILABLE)` from its `_onSurfaceCreate` _event
+handler_ when the native context cannot be created (memory pressure, or
 several viewers mounting at once). Error boundaries cannot catch
 event-handler throws, so release builds treat it as fatal.
 
@@ -756,22 +758,132 @@ Fix (all app-side, `src/features/explore/.../explore-card/`):
 
 - `modules/triposg/app.plugin.js` (config plugin, listed in
   `app.json`) appends `packaging.jniLibs.excludes` for the unused QNN
-  backends: DSP (+V66), GPU, and HTP skels/stubs V68/V69/V73/V75/V81.
-  Kept: `libQnnHtp.so`, `libQnnHtpPrepare.so` (EPContext loading may
-  need it), `libQnnHtpV79Skel.so`, `libQnnHtpV79Stub.so`,
+  backends: DSP (+V66), GPU, HTP skels/stubs V68/V69/V73/V75/V81, and
+  `libQnnHtpPrepare.so` (all units are precompiled EPContext binaries,
+  so nothing calls the prepare path — verified on device 2026-11-07).
+  Kept: `libQnnHtp.so`, `libQnnHtpV79Skel.so`, `libQnnHtpV79Stub.so`,
   `libQnnSystem.so`, plus ORT's `libonnxruntime.so` and
-  `libtriposg_jni.so`. Summed from the qnn-runtime 2.50.0 AAR listing,
-  the excludes drop ≈93.6 MB of uncompressed `.so` (≈126 MB → ≈32 MB
-  APK); confirm with `unzip -l` on the built APK.
+  `libtriposg_jni.so`. Measured release APK: 98 MB (Phase 3) → 63 MB.
+- `TRIPOSG_DEBUGGABLE=1` in the prebuild environment appends
+  `debuggable true` to the release build type (same plugin, separate
+  marker-guarded block) for `run-as` inspection and golden-noise parity
+  runs. Default builds are untouched; never ship a build made with it.
 
 ## Host-side trigger (no UI)
 
 - `src/app/dev-triposg.jsx` is deleted. Usage: push a photo, then
   `adb shell am broadcast -a expo.modules.triposg.DEBUG_CONVERT`
-  (optional extra `image`, default
-  `file:///sdcard/Download/triposg-test.png`); follow
+  (optional extras: `image`, default
+  `file:///sdcard/Download/triposg-test.png`; `noise`, a device path
+  to a (1,2048,64) float32 `.npy` for golden-noise grading; `tag`, a
+  subfolder of `triposg/debug/` for the outputs); follow
   `adb logcat -s TripoSGDebug`. The receiver
-  (`TripoSGDebugReceiver.kt` + one static JNI entry with fixed knobs:
-  50 steps, seed 42) refuses to run unless the app is debuggable, so it
-  is harmless in release. Grant the photo permission once via the
-  app's picker first (shared-storage reads need it).
+  (`TripoSGDebugReceiver.kt`, fixed knobs: 50 steps, d0 6 / d1 8) uses
+  seed 42 unless `-e noise` is given, writes its GLBs under the app
+  cache `triposg/debug[/<tag>/]`, and logs one TIMINGS line with
+  per-stage wall seconds at DONE. It refuses to run unless the app is
+  debuggable (see TRIPOSG_DEBUGGABLE above), so it is harmless in
+  release. Grant the photo permission once via the app's picker first
+  (shared-storage reads need it).
+
+# Phase 4: App Polish, Benchmarks, Docs
+
+Status: done on-device 2026-11-07 (Xiaomi 15 Ultra, release build,
+merged FP32 session, `v2-fp32-merged-50step` sideloaded models).
+
+## Final configuration
+
+50 steps, guidance 7.0, d0 6 / d1 8 (d1 9 + 200k display mesh with the
+high-detail toggle), FP32 merged transformer session on the NPU, VAE
+post + query on the NPU, u2net cut-out and DINOv2 on ORT CPU,
+meshoptimizer decimation (100k, 200k high detail). Models were
+sideload-only during the hackathon. On 2026-11-07 the set was published
+on Hugging Face (`spotnack/triposg-sm8750-qnn`, commit `a58b6607`) for
+in-app download. iOS unsupported (QNN is Android-only).
+
+## Benchmarks (all measured on the Xiaomi 15 Ultra)
+
+Methodology: release on-device build; figurine photo for timing runs;
+5 GPU goldens for parity (debug receiver with golden initial noise, d0
+6 / d1 8, 50 steps, graded with `parity/run_phase1.py
+--candidate-dir`); `adb shell dumpsys meminfo` / lmkd logcat for
+memory; gfxinfo framestats for scroll. Report:
+`ml/triposg-mobile/logs/phase4/parity_inapp_core/phase1_report.md`
+(+ `timings.txt`).
+
+- In-app conversion, merged session: figurine in 176 s. Lowest
+  MemAvailable 2.0 GB (baseline 7.2 GB with Spotify + YouTube Music
+  open); 0 lmkd kills, both music apps survived; tab switch < 2 s
+  during sampling; switching to Spotify and back kept the job running.
+- Airplane mode (no network at all, golden dinosaur photo): 185 s,
+  saved, 0 network errors, 0 kills, lowest MemAvailable 2.09 GB.
+- Stop: the job reported `cancelled` 1.5 s and 2.8 s after the tap
+  (one sampling step ≈ 3.2 s). No leftover job folder for either
+  cancelled job (checked with `run-as` on a debuggable build).
+- App-core parity vs the 5 GPU goldens: OVERALL PASS for both
+  `mesh.glb` and `mesh.display.glb`. The 5 runs were back to back, so
+  the drift from 177 s to 233 s is thermal.
+
+| id     | chamfer/diag | F     | IoU   | total   |
+| ------ | ------------ | ----- | ----- | ------- |
+| hjswed | 4.0e-3       | 0.987 | 0.974 | 177.6 s |
+| iuvbww | 5.5e-3       | 0.917 | 0.968 | 194.6 s |
+| qwvfsd | 5.5e-3       | 0.923 | 0.958 | 214.4 s |
+| uegvsd | 4.6e-3       | 0.965 | 0.972 | 225.8 s |
+| yuyyuw | 5.2e-3       | 0.929 | 0.962 | 232.9 s |
+
+Stage times from TIMINGS: dinov2 3–5 s; session create 11–17 s;
+sampling 150–189 s; vae 0.3 s; extraction 11–23 s; display 1.5–6 s.
+
+- High detail (d1 9), figurine: 251 s vs 176 s (+75 s). Full
+  `mesh.glb` 135 MB vs 34 MB. Peak app RSS 1.68 GB; lowest
+  MemAvailable 1.98 GB; 0 kills. The toggle hint reads "≈ +1–2 min".
+- Cut-out preview: 1.0 s for an 856×664 photo. It warned "cut off" on
+  a two-person selfie and showed no warning on the figurine.
+- Explore scroll (gfxinfo): 988 frames, 0 janky, p99 7 ms (static
+  thumbnails while converting).
+
+## What changed in Phase 4
+
+- Storage: a job's folder is deleted once its result is saved (native
+  `clearJob` now deletes the outDir for done records too — the full
+  mesh is only validity-checked, never kept), or found already saved
+  on relaunch. App start sweeps orphaned job folders and stale
+  `cache/triposg/*` dirs (`getStorageState` + `deleteSweepPaths`,
+  planned by the tested pure function `planStorageSweep`); a running
+  job's folder and (in debuggable builds) `cache/triposg/debug` are
+  never touched. Measured before the fix: 174 MB of job folders for 5
+  conversions plus 104 MB of stale cache folders.
+- High-detail saves used to fail with "Model file is missing or
+  unreadable (full mesh)": the GLB check read the whole 135 MB full mesh
+  into the Java heap (256 MB limit, `OutOfMemoryError` on device).
+  `assertValidGlb` now reads only the 20-byte header through a
+  `FileHandle` and compares the GLB length field with the file size.
+  Re-tested on the release build: high-detail figurine saved in 249 s,
+  0 OOM, 0 kills, and app user data grew by only 4.4 MB (the saved
+  200k-triangle display mesh; the job folder was deleted).
+- High detail raises the display mesh to 200k tris (100k when off).
+  The viewer (`useGLTF` + clone, no tri-count assumptions) and the
+  2-live-view Explore cap are unchanged: a 200k mesh is ~2× the GPU
+  buffers of a 100k one, still single-digit MB.
+- Cut-out chip uses the app's normal font (was monospace).
+- `no-undef` is on for `.js`/`.jsx` (with the RN/Metro globals), off
+  for `.ts`/`.tsx` (tsc covers those) — it catches the undeclared-
+  variable class that crashed a release build in round 25. Plus render
+  tests for the card and the auth restore (need the pinned
+  `react-test-renderer` devDependency installed).
+- Auth guest-restore race fixed (initial `isLoading` waits for the
+  AsyncStorage read in demo mode).
+
+## Limitations
+
+- Single-object inputs; cropped subjects warn but may still convert
+  poorly. Background removal is u2net (Apache-2.0); BiRefNet (MIT) is
+  the post-hackathon upgrade.
+- SM8750-only: other SoCs need their own AI Hub compile. 16 GB RAM
+  effectively required (~7 GB pinned NPU memory during sampling).
+- 6.9 GB model download (Hugging Face `spotnack/triposg-sm8750-qnn`), or
+  sideload over adb. The app refuses phones with under 13 GiB total RAM,
+  so 12 GB phones are not offered the download.
+- The golden demo images (license UNVERIFIED) were removed from the
+  app; no build ships them.

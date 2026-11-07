@@ -30,10 +30,10 @@ export default function AppTabs() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ focused }) => (
             <Image
               source={require("@/assets/images/tabIcons/home.png")}
-              style={{ width: ICON_SIZE, height: ICON_SIZE, tintColor: color }}
+              style={{ width: ICON_SIZE, height: ICON_SIZE, opacity: focused ? 1 : 0.5 }}
             />
           ),
         }}
@@ -73,7 +73,7 @@ export default function AppTabs() {
                 style={{
                   width: ICON_SIZE,
                   height: ICON_SIZE,
-                  tintColor: focused ? colors.text : colors.textSecondary,
+                  opacity: focused ? 1 : 0.5,
                 }}
               />
             ),

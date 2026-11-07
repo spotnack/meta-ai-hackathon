@@ -1,0 +1,5 @@
+hjswed TIMINGS preprocess=0.2 dinov2=3.0 session_create=11.3 sampling=150.2 vae=0.3 extraction=11.2 display=1.5 total=177.6
+iuvbww TIMINGS preprocess=0.0 dinov2=4.1 session_create=14.6 sampling=159.4 vae=0.3 extraction=13.6 display=2.5 total=194.6
+qwvfsd TIMINGS preprocess=0.1 dinov2=4.3 session_create=14.2 sampling=166.3 vae=0.3 extraction=23.4 display=5.8 total=214.4
+uegvsd TIMINGS preprocess=0.1 dinov2=4.3 session_create=14.7 sampling=189.0 vae=0.3 extraction=14.3 display=3.1 total=225.8
+yuyyuw TIMINGS preprocess=0.3 dinov2=5.1 session_create=17.0 sampling=189.0 vae=0.3 extraction=17.3 display=3.8 total=232.9

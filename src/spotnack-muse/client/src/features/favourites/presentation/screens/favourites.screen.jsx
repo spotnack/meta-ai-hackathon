@@ -24,7 +24,8 @@ import {
   FavouriteCardWrapper,
   HeaderContainer,
   EmptyStateContainer,
-  favouriteCardStyles,
+  EmptyStateText,
+  HeaderSpacer,
 } from "./favourites.screen.styles";
 
 // React Component:
@@ -40,13 +41,13 @@ export const FavouritesScreen = () => {
             <Ionicons name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
           <ThemedText type="subtitle">Favourites</ThemedText>
-          <ThemedView style={{ width: 24 }} />
+          <HeaderSpacer />
         </HeaderContainer>
         {items.length === 0 ? (
           <EmptyStateContainer>
-            <ThemedText themeColor="textSecondary">
+            <EmptyStateText themeColor="textSecondary">
               No favourites yet. Double-tap a card to add one.
-            </ThemedText>
+            </EmptyStateText>
           </EmptyStateContainer>
         ) : (
           <ScrollView showsVerticalScrollIndicator={false}>
@@ -58,7 +59,7 @@ export const FavouritesScreen = () => {
                   <ExploreCardComponent
                     item={item}
                     pageToNavigate={"Stage3dScreen"}
-                    style={favouriteCardStyles.fullWidth}
+                    fullWidth
                   />
                 </FavouriteCardWrapper>
               );

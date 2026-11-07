@@ -21,7 +21,6 @@ import {
   LinkText,
   ErrorText,
   FieldErrorText,
-  INPUT_ERROR_STYLE,
   InfoText,
 } from "./sign-up.screen.styles";
 
@@ -53,7 +52,7 @@ export default function SignUpScreen() {
                   onChangeText={vm.setName}
                   autoCapitalize="words"
                   autoComplete="off"
-                  style={vm.fieldErrors.name ? INPUT_ERROR_STYLE : undefined}
+                  $hasError={Boolean(vm.fieldErrors.name)}
                 />
                 {vm.fieldErrors.name ? <FieldErrorText>{vm.fieldErrors.name}</FieldErrorText> : null}
                 <StyledInput
@@ -64,7 +63,7 @@ export default function SignUpScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoComplete="off"
-                  style={vm.fieldErrors.email ? INPUT_ERROR_STYLE : undefined}
+                  $hasError={Boolean(vm.fieldErrors.email)}
                 />
                 {vm.fieldErrors.email ? <FieldErrorText>{vm.fieldErrors.email}</FieldErrorText> : null}
                 <StyledInput
@@ -74,7 +73,7 @@ export default function SignUpScreen() {
                   onChangeText={vm.setPassword}
                   secureTextEntry
                   autoComplete="new-password"
-                  style={vm.fieldErrors.password ? INPUT_ERROR_STYLE : undefined}
+                  $hasError={Boolean(vm.fieldErrors.password)}
                 />
                 {vm.fieldErrors.password ? <FieldErrorText>{vm.fieldErrors.password}</FieldErrorText> : null}
               </FieldGroup>

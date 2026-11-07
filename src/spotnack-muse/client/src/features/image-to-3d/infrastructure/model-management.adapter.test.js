@@ -1,4 +1,5 @@
 import { MODEL_STATUS } from "../domain/model-management.port";
+import { TRIPOSG_MODELS_MANIFEST } from "./triposg-models.manifest";
 
 jest.mock(
   "@spotnack/triposg",
@@ -14,7 +15,10 @@ jest.mock(
   { virtual: true },
 );
 
-const MANIFEST_TOTAL = 7436843245;
+// From the bundled manifest, not hardcoded: the orchestrator regenerates
+// this file on every weights change, and the adapter computes byte counts
+// from the same manifest.
+const MANIFEST_TOTAL = TRIPOSG_MODELS_MANIFEST.totalBytes;
 
 const loadAll = () => {
   const native = require("@spotnack/triposg");
@@ -173,6 +177,71 @@ describe("model-management state machine", () => {
     expect(err.needBytes).toBe(MANIFEST_TOTAL);
     expect(err.freeBytes).toBe(1024);
     expect(native.startDownload).not.toHaveBeenCalled();
+  });
+
+  test("a running download reports Downloading at once and ignores a repeat tap", async () => {
+    const { native, modelManagementAdapter } = loadAll();
+    native.getStatus.mockResolvedValue(supportedStatus());
+    native.getDownloadProgress.mockResolvedValue({
+      downloadedBytes: 1024,
+      totalBytes: MANIFEST_TOTAL,
+    });
+    native.downloadPreflight.mockResolvedValue({
+      metered: false,
+      freeBytes: 100 * 1024 ** 3,
+      enoughSpace: true,
+    });
+    let finish;
+    native.startDownload.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const onStarted = jest.fn();
+    const first = modelManagementAdapter.startDownload({ onStarted });
+    // Let the preflight awaits run until the native call is pending.
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(onStarted).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: MODEL_STATUS.DOWNLOADING,
+        downloadedBytes: 1024,
+      }),
+    );
+    const repeat = await modelManagementAdapter.startDownload();
+    expect(repeat.status).toBe(MODEL_STATUS.DOWNLOADING);
+    expect(native.startDownload).toHaveBeenCalledTimes(1);
+    finish({ status: "completed", problem: null });
+    await first;
+  });
+
+  test("verify reports Verifying at once and ignores a repeat tap", async () => {
+    const { native, modelManagementAdapter } = loadAll();
+    native.getStatus.mockResolvedValue(supportedStatus({ modelsVerified: true }));
+    native.getDownloadProgress.mockResolvedValue({
+      downloadedBytes: MANIFEST_TOTAL,
+      totalBytes: MANIFEST_TOTAL,
+    });
+    let finish;
+    native.verifyModels.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const onStarted = jest.fn();
+    const first = modelManagementAdapter.verifyModels({ onStarted });
+    expect(onStarted).toHaveBeenCalledWith(
+      expect.objectContaining({ status: MODEL_STATUS.VERIFYING }),
+    );
+    const repeat = await modelManagementAdapter.verifyModels();
+    expect(repeat.status).toBe(MODEL_STATUS.VERIFYING);
+    expect(native.verifyModels).toHaveBeenCalledTimes(1);
+    finish({ ok: true, problem: null });
+    const done = await first;
+    expect(done.status).toBe(MODEL_STATUS.INSTALLED);
+    expect(done.fullyVerified).toBe(true);
+    native.deleteModels.mockResolvedValue({ ok: true });
+    await modelManagementAdapter.deleteModels();
+    expect((await modelManagementAdapter.getState()).fullyVerified).toBe(false);
   });
 
   test("a failed full verification marks the set corrupt", async () => {

@@ -46,6 +46,10 @@ object TripoSGJobs {
   @Volatile
   var progressSnapshot: Pair<Double, String>? = null
 
+  // Same, for the model download notification (fraction, "x of y").
+  @Volatile
+  var downloadSnapshot: Pair<Double, String>? = null
+
   private fun recordFile(appFiles: File): File =
     File(File(appFiles, "triposg"), RECORD_NAME)
 

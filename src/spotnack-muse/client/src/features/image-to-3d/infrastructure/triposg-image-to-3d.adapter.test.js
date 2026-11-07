@@ -93,10 +93,32 @@ jest.mock("expo-file-system", () => {
       }
       return cannedBytes.get(this.uri).buffer.slice(0);
     }
+
+    /**
+     * Opens a read handle over the canned bytes, or throws like a missing file.
+     * @returns {{size: number, readBytes: function(number): Promise<Uint8Array>, close: function(): void}} Handle.
+     */
+    open() {
+      if (!cannedBytes.has(this.uri)) {
+        throw new Error("file does not exist");
+      }
+      const bytes = cannedBytes.get(this.uri);
+      let offset = 0;
+      return {
+        size: bytes.length,
+        async readBytes(length) {
+          const chunk = bytes.slice(offset, offset + length);
+          offset += chunk.length;
+          return chunk;
+        },
+        close() {},
+      };
+    }
   }
   return {
     Directory: FakeDirectory,
     File: FakeFile,
+    FileMode: { ReadOnly: "r" },
     Paths: { cache: { name: "cache" } },
     __copied: copied,
     __deleted: deleted,

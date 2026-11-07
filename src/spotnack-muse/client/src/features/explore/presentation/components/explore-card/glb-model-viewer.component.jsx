@@ -1,6 +1,6 @@
 // React
-import { Component, Fragment, useRef, useEffect, useState, useMemo, Suspense } from "react";
-import { ActivityIndicator, Image, StyleSheet, Text, View } from "react-native";
+import { Component, Fragment, useCallback, useRef, useEffect, useState, useMemo, Suspense } from "react";
+import { ActivityIndicator } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 // Three.js
@@ -16,6 +16,16 @@ import { ContactShadows } from "@react-three/drei";
 // GL context failure guard (expo-gl throws from its surface-create event
 // handler, which error boundaries cannot catch).
 import { subscribeGlNotAvailable } from "./gl-availability";
+import { saveModelPreview } from "./model-preview-snapshot";
+
+// Styles
+import {
+  FALLBACK_ICON_COLOR,
+  FallbackCaption,
+  FallbackContainer,
+  FallbackPhoto,
+  ViewerContainer,
+} from "./glb-model-viewer.component.styles";
 
 const _origWarn = console.warn;
 console.warn = (...args) => {
@@ -77,15 +87,17 @@ export function prepareUntexturedMeshes(root) {
  * @param {object} root0 - Component props.
  * @param {string} root0.uri - URI of the GLB asset to load.
  * @param {number} root0.scaleFactor - Multiplier applied on top of the auto-fit scale.
+ * @param {function(object): void} [root0.onSettled] - Called once with the renderer when the model reaches its fitted size.
  * @returns {React.JSX.Element} An animated 3D group containing the loaded model.
  */
-export function RotatingModel({ uri, scaleFactor = 1.0 }) {
+export function RotatingModel({ uri, scaleFactor = 1.0, onSettled }) {
   const { scene } = useGLTF(uri);
   const clonedScene = useMemo(() => prepareUntexturedMeshes(scene.clone(true)), [scene]);
   const groupRef = useRef();
   const currentScale = useRef(0);
   const [fitScale, setFitScale] = useState(0);
   const [offset, setOffset] = useState([0, 0, 0]);
+  const settledReported = useRef(false);
 
   useEffect(() => {
     const box = new THREE.Box3().setFromObject(clonedScene);
@@ -100,7 +112,7 @@ export function RotatingModel({ uri, scaleFactor = 1.0 }) {
   // than with @react-spring/three: react-spring requests frames by invalidating *every* canvas, including ones
   // still starting up (no renderer yet), which crashes R3F ("Cannot read property 'xr' of null"). The canvas
   // renders every frame anyway, so per-frame damping needs no frame requests.
-  useFrame((_state, delta) => {
+  useFrame((state, delta) => {
     const group = groupRef.current;
     if (!group) return;
     currentScale.current = THREE.MathUtils.damp(
@@ -112,6 +124,16 @@ export function RotatingModel({ uri, scaleFactor = 1.0 }) {
     const scale = currentScale.current * scaleFactor;
     group.scale.set(scale * 1.2, scale * 1.8, scale * 1.2);
     group.rotation.y += delta * 0.6;
+    // Within 1% of the fitted size: the frame looks like the model at rest.
+    if (
+      onSettled &&
+      !settledReported.current &&
+      fitScale > 0 &&
+      Math.abs(currentScale.current - fitScale) < fitScale * 0.01
+    ) {
+      settledReported.current = true;
+      onSettled(state.gl);
+    }
   });
 
   return (
@@ -125,9 +147,7 @@ export function RotatingModel({ uri, scaleFactor = 1.0 }) {
   );
 }
 
-const DEFAULT_STYLE = { width: "100%", height: 140 };
 const DEFAULT_BACKGROUND = "#242225";
-const FALLBACK_ICON_COLOR = "rgba(255, 255, 255, 0.6)";
 const MAX_CANVAS_RETRIES = 2;
 const CANVAS_RETRY_DELAY_MS = 500;
 
@@ -182,26 +202,15 @@ class GlCanvasBoundary extends Component {
 }
 
 const CanvasFallback = ({ isRetrying, backgroundColor }) => (
-  <View style={[fallbackStyles.container, { backgroundColor }]}>
+  <FallbackContainer $backgroundColor={backgroundColor}>
     {isRetrying ? (
       <ActivityIndicator color={FALLBACK_ICON_COLOR} />
     ) : (
       <MaterialCommunityIcons name="cube-off-outline" size={32} color={FALLBACK_ICON_COLOR} />
     )}
-  </View>
+  </FallbackContainer>
 );
 
-const fallbackStyles = StyleSheet.create({
-  container: { flex: 1, alignItems: "center", justifyContent: "center" },
-  photo: { ...StyleSheet.absoluteFillObject, opacity: 0.55 },
-  caption: {
-    marginTop: 8,
-    marginHorizontal: 12,
-    textAlign: "center",
-    fontSize: 12,
-    color: FALLBACK_ICON_COLOR,
-  },
-});
 
 /**
  * Static stand-in shown when the native GL context could not be created
@@ -214,28 +223,28 @@ const fallbackStyles = StyleSheet.create({
  * @returns {React.JSX.Element} The static fallback.
  */
 const GlUnavailableFallback = ({ photoUri, backgroundColor, caption }) => (
-  <View style={[fallbackStyles.container, { backgroundColor }]}>
-    {photoUri ? (
-      <Image source={{ uri: photoUri }} style={fallbackStyles.photo} />
-    ) : null}
+  <FallbackContainer $backgroundColor={backgroundColor}>
+    {photoUri ? <FallbackPhoto source={{ uri: photoUri }} /> : null}
     <MaterialCommunityIcons name="cube-off-outline" size={32} color={FALLBACK_ICON_COLOR} />
-    {caption ? <Text style={fallbackStyles.caption}>{caption}</Text> : null}
-  </View>
+    {caption ? <FallbackCaption>{caption}</FallbackCaption> : null}
+  </FallbackContainer>
 );
 
 /**
  * Renders a GLB model in a 3D canvas, with static fallbacks.
  * @param {object} root0 - Component props.
  * @param {string} root0.uri - URI of the GLB asset to load.
- * @param {object} [root0.canvas] - Container style override.
+ * @param {boolean} [root0.fill] - Fill the parent (Stage screen) instead of the 140 px card size.
  * @param {number} [root0.scaleFactor] - Multiplier applied on top of the auto-fit scale.
  * @param {string} [root0.background] - Canvas background color.
  * @param {boolean} [root0.showShadows] - Whether to render contact shadows.
  * @param {string|null} [root0.photoUri] - Photo for the GL-unavailable fallback, if any.
  * @param {string|null} [root0.fallbackCaption] - Message for the GL-unavailable fallback, if any.
+ * @param {string|null} [root0.snapshotUri] - When set, saves a still of the first settled frame here (see model-preview-snapshot.js).
+ * @param {function(string): void} [root0.onSnapshotSaved] - Called with the saved still's URI.
  * @returns {React.JSX.Element} The viewer or its fallback.
  */
-export const GlbModelViewer = ({ uri, canvas, scaleFactor, background, showShadows = false, photoUri = null, fallbackCaption = null }) => {
+export const GlbModelViewer = ({ uri, fill = false, scaleFactor, background, showShadows = false, photoUri = null, fallbackCaption = null, snapshotUri = null, onSnapshotSaved }) => {
   const backgroundColor = background ?? DEFAULT_BACKGROUND;
   // Defer Canvas creation until after the first commit so the native GLView
   // surface is fully attached before WebGLRenderer calls getShaderPrecisionFormat.
@@ -248,9 +257,21 @@ export const GlbModelViewer = ({ uri, canvas, scaleFactor, background, showShado
   const [glUnavailable, setGlUnavailable] = useState(false);
   useEffect(() => subscribeGlNotAvailable(() => setGlUnavailable(true)), []);
   useEffect(() => { setGlUnavailable(false); }, [uri]);
+  // Save after the settled frame was presented (next tick), not mid-frame.
+  const handleSettled = useCallback(
+    (renderer) => {
+      if (!snapshotUri) return;
+      setTimeout(() => {
+        saveModelPreview(renderer.getContext(), snapshotUri).then((savedUri) => {
+          if (savedUri) onSnapshotSaved?.(savedUri);
+        });
+      }, 0);
+    },
+    [snapshotUri, onSnapshotSaved],
+  );
 
   return (
-    <View style={canvas ?? DEFAULT_STYLE} pointerEvents="none">
+    <ViewerContainer $fill={fill} pointerEvents="none">
       {glUnavailable ? (
         <GlUnavailableFallback
           photoUri={photoUri}
@@ -275,13 +296,17 @@ export const GlbModelViewer = ({ uri, canvas, scaleFactor, background, showShado
             <directionalLight position={[3, 4, 5]} intensity={1.6} />
             {uri ? (
               <Suspense fallback={null}>
-                <RotatingModel uri={uri} scaleFactor={scaleFactor} />
+                <RotatingModel
+                  uri={uri}
+                  scaleFactor={scaleFactor}
+                  onSettled={snapshotUri ? handleSettled : undefined}
+                />
                 {showShadows && <ContactShadows position-y={-0.5} opacity={0.6} />}
               </Suspense>
             ) : null}
           </Canvas>
         </GlCanvasBoundary>
       )}
-    </View>
+    </ViewerContainer>
   );
 };

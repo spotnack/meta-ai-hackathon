@@ -57,6 +57,24 @@ export function convert(request) {
 }
 
 /**
+ * Cut-out preview for the picker: the exact RGB canvas a conversion
+ * would feed DINOv2 (same u2net + preprocessing as the pipeline), plus
+ * mask stats for the input warnings. CPU-only; creates and releases the
+ * u2net session inside the call. Resolves null when unavailable (no
+ * models, busy engine) — the caller shows the original photo instead.
+ * @param {string} imageUri - Photo to preview.
+ * @returns {Promise<{uri: string, width: number, height: number, borderTouch: number, bigComponents: number, maskAreaFrac: number}|null>} Preview PNG file URI, dimensions and stats.
+ */
+export async function previewCutout(imageUri) {
+  try {
+    return await native().previewCutout({ imageUri });
+  } catch (err) {
+    console.warn("- Cut-out preview unavailable:", err?.message ?? err);
+    return null;
+  }
+}
+
+/**
  * Reads the persisted conversion job, if any: a still-running job (live
  * worker), a finished job awaiting its save, or an interrupted one (the
  * process died mid-run; leftovers already deleted).
@@ -73,6 +91,26 @@ export function getPendingJob() {
  */
 export function clearJob(jobId) {
   return native().clearJob(jobId);
+}
+
+/**
+ * Storage state for the startup sweep (see storage-sweep.js): leftover job
+ * folders, the persisted record (if any), whether a worker owns the engine
+ * now, cache subdirs, and whether the build is debuggable. No deletion.
+ * @returns {Promise<{jobDirs: string[], record: object|null, workerAlive: boolean, cacheDirs: string[], debuggable: boolean}>} Sweepable state.
+ */
+export function getStorageState() {
+  return native().getStorageState();
+}
+
+/**
+ * Deletes exactly the swept paths a storage-sweep plan named (child names
+ * under the jobs dir and cache/triposg; anything else is refused natively).
+ * @param {{jobDirs?: string[], cacheDirs?: string[]}} plan - Plan from planStorageSweep.
+ * @returns {Promise<{deleted: number}>} Deleted top-level dir count.
+ */
+export function deleteSweepPaths(plan) {
+  return native().deleteSweepPaths(plan ?? {});
 }
 
 /**

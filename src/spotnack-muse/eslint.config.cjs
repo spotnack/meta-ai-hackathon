@@ -6,10 +6,28 @@ const pluginJest = require("eslint-plugin-jest");
 
 module.exports = [
   {
-    files: ["client/**/*.{js,jsx,ts,tsx}"],
+    // Global ignores (generated output, never linted).
     ignores: [".yarn/**", "client/.expo/**", "client/**/coverage/**"],
+  },
+  {
+    files: ["client/**/*.{js,jsx,ts,tsx}"],
     ...js.configs.recommended,
     languageOptions: {
+      // Runtime globals the Babel parser cannot see: no-undef needs them
+      // declared (React Native / Expo provide them; tsc covers .ts/.tsx).
+      globals: {
+        AbortController: "readonly",
+        __dirname: "readonly",
+        clearTimeout: "readonly",
+        console: "readonly",
+        fetch: "readonly",
+        global: "readonly",
+        module: "readonly",
+        process: "readonly",
+        require: "readonly",
+        setImmediate: "readonly",
+        setTimeout: "readonly",
+      },
       parser: require("@babel/eslint-parser"),
       parserOptions: {
         requireConfigFile: false,
@@ -32,6 +50,7 @@ module.exports = [
       ...pluginJest.configs.recommended.rules,
       indent: ["error", 2],
       "linebreak-style": ["error", "unix"],
+      "no-undef": ["error"],
       quotes: ["error", "double", { avoidEscape: true }],
       semi: ["error", "always"],
       // JSDoc-specific rules:
@@ -55,7 +74,19 @@ module.exports = [
   {
     files: ["client/**/*.test.{js,jsx,ts,tsx}"],
     languageOptions: {
-      globals: require("globals").jest,
+      globals: {
+        ...require("globals").jest,
+        process: "readonly",
+        require: "readonly",
+        setImmediate: "readonly",
+      },
+    },
+  },
+  {
+    // tsc already reports unknown names in TS; no-undef only false-positives there.
+    files: ["client/**/*.{ts,tsx}"],
+    rules: {
+      "no-undef": "off",
     },
   },
 ];

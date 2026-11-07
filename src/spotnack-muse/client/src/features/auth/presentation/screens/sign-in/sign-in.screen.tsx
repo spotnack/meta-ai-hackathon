@@ -28,7 +28,6 @@ import {
   LinkText,
   ErrorText,
   FieldErrorText,
-  INPUT_ERROR_STYLE,
 } from "./sign-in.screen.styles";
 
 /**
@@ -81,7 +80,7 @@ export default function SignInScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="off"
-              style={vm.fieldErrors.email ? INPUT_ERROR_STYLE : undefined}
+              $hasError={Boolean(vm.fieldErrors.email)}
             />
             {vm.fieldErrors.email ? (
               <FieldErrorText>{vm.fieldErrors.email}</FieldErrorText>
@@ -93,7 +92,7 @@ export default function SignInScreen() {
               onChangeText={vm.setPassword}
               secureTextEntry
               autoComplete="password"
-              style={vm.fieldErrors.password ? INPUT_ERROR_STYLE : undefined}
+              $hasError={Boolean(vm.fieldErrors.password)}
             />
             {vm.fieldErrors.password ? (
               <FieldErrorText>{vm.fieldErrors.password}</FieldErrorText>

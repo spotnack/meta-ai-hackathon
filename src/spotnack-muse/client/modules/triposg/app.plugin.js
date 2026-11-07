@@ -1,16 +1,24 @@
 /*
-Config plugin trimming the QNN runtime to the SM8750 target (Phase 3B).
+Config plugin trimming the QNN runtime to the SM8750 target (Phase 3B)
+plus an opt-in debuggable release flag (Phase 4).
 
 The com.qualcomm.qti:qnn-runtime AAR ships backend libraries for every
 Hexagon generation plus GPU/DSP fallbacks (~94 MB of .so the app never
 loads: the AI Hub bins are HTP-only and QNN GPU finalization fails on
 this SoC). This plugin appends a `packaging.jniLibs.excludes` block to the
 app's build.gradle during prebuild, keeping only:
-  libQnnHtp.so, libQnnHtpPrepare.so (kept: EPContext loading may need it),
-  libQnnHtpV79Skel.so, libQnnHtpV79Stub.so, libQnnSystem.so.
+  libQnnHtp.so, libQnnHtpV79Skel.so, libQnnHtpV79Stub.so, libQnnSystem.so.
+libQnnHtpPrepare.so is excluded too: all units are precompiled AI Hub
+EPContext binaries, so nothing calls the prepare path — verified on device
+2026-11-07 (a full conversion works without it; release APK 98 MB -> 63 MB).
 
-Idempotent: guarded by a marker comment, so repeated prebuilds do not
-duplicate the block. Listed in app.json plugins (local path).
+TRIPOSG_DEBUGGABLE=1 in the prebuild environment additionally marks the
+release build debuggable (needed for `run-as` inspection of job folders
+and golden-noise parity runs). Off by default; never commit a build made
+with it.
+
+Idempotent: guarded by marker comments, so repeated prebuilds do not
+duplicate the blocks. Listed in app.json plugins (local path).
 */
 
 const {
@@ -27,6 +35,9 @@ const EXCLUDED_JNILIBS = [
   "lib/arm64-v8a/libQnnDspV66Stub.so",
   // GPU backend (unused: QNN GPU finalization fails on SM8750).
   "lib/arm64-v8a/libQnnGpu.so",
+  // Prepare path (unused: every unit is a precompiled AI Hub EPContext
+  // binary; verified on device 2026-11-07, release APK 98 MB -> 63 MB).
+  "lib/arm64-v8a/libQnnHtpPrepare.so",
   // Hexagon generations other than V79 (SM8750).
   "lib/arm64-v8a/libQnnHtpV68Skel.so",
   "lib/arm64-v8a/libQnnHtpV68Stub.so",
@@ -61,8 +72,32 @@ ${excludes}
     return config;
   });
 
+const DEBUGGABLE_MARKER = "// triposg: debuggable release (TRIPOSG_DEBUGGABLE=1)";
+
+// Opt-in debuggable release for on-device inspection (`run-as` into job
+// folders, golden-noise parity via the debug receiver). Only when
+// TRIPOSG_DEBUGGABLE=1 is set in the prebuild environment; default builds
+// are untouched. Appended as a second android block: Gradle merges repeat
+// android blocks, and the marker keeps prebuilds idempotent.
+const withTripoSGDebuggable = (config) =>
+  withAppBuildGradle(config, (config) => {
+    if (process.env.TRIPOSG_DEBUGGABLE !== "1") return config;
+    if (config.modResults.contents.includes(DEBUGGABLE_MARKER)) return config;
+    config.modResults.contents += `
+android {
+    ${DEBUGGABLE_MARKER}
+    buildTypes {
+        release {
+            debuggable true
+        }
+    }
+}
+`;
+    return config;
+  });
+
 module.exports = createRunOncePlugin(
-  withTripoSGPackaging,
+  (config) => withTripoSGDebuggable(withTripoSGPackaging(config)),
   "triposg-packaging",
   "1.0.0",
 );

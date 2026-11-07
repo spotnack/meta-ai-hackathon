@@ -1,5 +1,5 @@
 import { Platform } from "react-native";
-import { Directory, File, Paths } from "expo-file-system";
+import { Directory, File, FileMode, Paths } from "expo-file-system";
 import { randomUUID } from "expo-crypto";
 
 import {
@@ -78,20 +78,36 @@ const GLB_HEADER_BYTES = 20;
  * @returns {Promise<void>} Resolves when the file is a valid GLB.
  */
 export const assertValidGlb = async (uri, which) => {
-  let buffer = null;
+  // Header + size only: a high-detail full mesh is ~135 MB, and reading it
+  // whole (arrayBuffer) overflows the 256 MB Android Java heap (OOM seen on
+  // device), which wrongly failed every high-detail save.
+  let header = null;
+  let size = 0;
+  let handle = null;
   try {
-    buffer = await new File(uri).arrayBuffer();
+    handle = new File(uri).open(FileMode.ReadOnly);
+    size = handle.size ?? 0;
+    header = await handle.readBytes(GLB_HEADER_BYTES);
   } catch (err) {
     throw new Error(`Model file is missing or unreadable (${which}).`);
+  } finally {
+    try {
+      handle?.close();
+    } catch (err) {
+      // Already closed or never opened.
+    }
   }
-  const bytes = new Uint8Array(buffer);
-  let valid = bytes.length >= GLB_HEADER_BYTES;
+  let valid = header.length >= GLB_HEADER_BYTES;
   if (valid) {
-    const view = new DataView(buffer);
+    const view = new DataView(
+      header.buffer,
+      header.byteOffset,
+      header.byteLength,
+    );
     valid =
       view.getUint32(0, true) === GLB_MAGIC &&
       view.getUint32(4, true) === GLB_VERSION &&
-      view.getUint32(8, true) === bytes.length;
+      view.getUint32(8, true) === size;
   }
   if (!valid) {
     throw new Error(`Model file is incomplete or corrupt (${which}).`);
@@ -214,14 +230,14 @@ const checkReady = async () => {
   if (!status.modelsVerified) {
     throw new ImageTo3dUnavailableError(
       "models-missing",
-      "Download the TripoSG models below first (or sideload them, then Verify).",
+      "Download the TripoSG QNN model below first (or sideload it, then Verify).",
     );
   }
 };
 
 /** @type {import("../domain/image-to-3d.port").ImageTo3dPort} */
 export const triposgImageTo3dAdapter = {
-  convertImageTo3d: async ({ image, onProgress, signal }) => {
+  convertImageTo3d: async ({ image, onProgress, signal, depth }) => {
     if (Platform.OS !== "android") {
       throw new ImageTo3dUnavailableError(
         "unsupported",
@@ -233,6 +249,7 @@ export const triposgImageTo3dAdapter = {
     await checkReady();
 
     const steps = 50;
+    const highDetail = (depth?.d1 ?? 8) >= 9;
     let jobId;
     try {
       jobId = await convert({
@@ -241,13 +258,19 @@ export const triposgImageTo3dAdapter = {
         imageWidth: image.width,
         imageHeight: image.height,
         steps,
+        // Native defaults to {d0: 6, d1: 8}; high detail passes {6, 9}.
+        depth: depth ?? { d0: 6, d1: 8 },
+        // High detail also raises the display mesh to 200k tris: at 100k
+        // the extra depth is barely visible, and the full mesh is deleted
+        // after the save (clearJob), so the display mesh is the keeper.
+        targetTris: highDetail ? 200000 : 100000,
       });
     } catch (err) {
       // Lost race with a delete between checkReady and convert.
       if (/no models|models incomplete/i.test(err?.message ?? "")) {
         throw new ImageTo3dUnavailableError(
           "models-missing",
-          "Download the TripoSG models below first (or sideload them, then Verify).",
+          "Download the TripoSG QNN model below first (or sideload it, then Verify).",
         );
       }
       throw err;

@@ -1,9 +1,15 @@
 /*
 Global cap on concurrent live GL views: at most MAX_LIVE_GL_VIEWS cards may
-mount a 3D canvas at once, even when idle. Each live GLView pins a native
-GL context; several mounting together (a horizontal Explore list keeps a
-window of cards mounted) exhausts them and trips expo-gl's fatal
-"GL is currently not available" path.
+mount a 3D canvas at once. Each live GLView pins a native GL context; too
+many mounting together trips expo-gl's "GL is currently not available"
+path (made non-fatal by gl-availability.js: that card shows its fallback).
+While a conversion runs no card holds a context at all (`previewOnly`, see
+gl-preview-policy.js), so this cap only applies when the NPU is idle.
+
+20 is close to main's behaviour (every visible card live). It was 2 while
+cards without a live view showed a generic placeholder; with model stills
+(model-preview-snapshot.js, pre-rendered food stills) the cap mostly
+bounds memory. Raise or lower it after testing on the target phone.
 
 The grant goes to the most recently acquired leases: scrolling a new card
 into view takes the grant from the least recently seen one, whose viewer
@@ -12,9 +18,9 @@ wants GL (it may regain the grant when others release); the native context
 is only held while actually granted, because only granted cards mount Canvas.
 */
 
-import { useEffect, useReducer } from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 
-export const MAX_LIVE_GL_VIEWS = 2;
+export const MAX_LIVE_GL_VIEWS = 20;
 
 let acquisitionSeq = 0;
 const holders = new Map();
@@ -93,8 +99,13 @@ export function resetGlLeases() {
  * @returns {boolean} Whether the card may mount its 3D canvas.
  */
 export function useGlViewLease(id, wanted) {
-  const [, bumpGrantsSeen] = useReducer((count) => count + 1, 0);
-  useEffect(() => subscribeGlLeases(bumpGrantsSeen), [bumpGrantsSeen]);
+  // useSyncExternalStore, not a reducer bump + direct read: the React
+  // Compiler memoizes a plain hasGlLease(id) read on (id, wanted), so a
+  // granted lease never reached the card (every card stayed static).
+  const granted = useSyncExternalStore(
+    subscribeGlLeases,
+    useCallback(() => hasGlLease(id), [id]),
+  );
   useEffect(() => {
     if (!wanted) {
       releaseGlLease(id);
@@ -103,5 +114,5 @@ export function useGlViewLease(id, wanted) {
     acquireGlLease(id);
     return () => releaseGlLease(id);
   }, [id, wanted]);
-  return Boolean(wanted) && hasGlLease(id);
+  return Boolean(wanted) && granted;
 }

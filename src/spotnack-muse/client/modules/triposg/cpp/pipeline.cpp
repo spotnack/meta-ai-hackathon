@@ -342,6 +342,107 @@ bool Engine::Configure(const std::string& model_dir,
   return true;
 }
 
+// u2net query shim for RemoveBackgroundU2net.
+struct U2netQuery {
+  Ort::Env* env;
+  Ort::MemoryInfo* mem;
+  Ort::Session* session;
+  static void Run(const float* nchw, float* out, int out_n, void* user) {
+    auto* q = static_cast<U2netQuery*>(user);
+    Ort::AllocatorWithDefaultOptions alloc;
+    std::string in_name =
+        q->session->GetInputNameAllocated(0, alloc).get();
+    std::string out_name =
+        q->session->GetOutputNameAllocated(0, alloc).get();
+    auto in_shape = q->session->GetInputTypeInfo(0)
+                        .GetTensorTypeAndShapeInfo()
+                        .GetShape();
+    if (in_shape != std::vector<int64_t>({1, 3, 320, 320})) {
+      std::fprintf(stderr, "u2net input is not (1,3,320,320)\n");
+      std::exit(1);
+    }
+    std::vector<int64_t> shape = in_shape;
+    const char* in_names[1] = {in_name.c_str()};
+    const char* out_names[1] = {out_name.c_str()};
+    Ort::Value in = Ort::Value::CreateTensor<float>(
+        *q->mem, const_cast<float*>(nchw), Numel(shape), shape.data(),
+        shape.size());
+    std::vector<Ort::Value> outs = q->session->Run(
+        Ort::RunOptions{nullptr}, in_names, &in, 1, out_names, 1);
+    auto got_shape = outs[0].GetTensorTypeAndShapeInfo().GetShape();
+    float* fp = outs[0].GetTensorMutableData<float>();
+    // Channel 0 of the single output: in NCHW it is the first block.
+    size_t total = Numel(got_shape);
+    if (total < static_cast<size_t>(out_n) ||
+        total % static_cast<size_t>(out_n) != 0) {
+      std::fprintf(stderr, "u2net output size %zu, want %d\n", total, out_n);
+      std::exit(1);
+    }
+    std::memcpy(out, fp, static_cast<size_t>(out_n) * 4);
+  }
+};
+
+bool Engine::PreviewCutout(const uint8_t* rgba_bytes, int w, int h,
+                          std::vector<uint8_t>& out_rgb, int& out_w,
+                          int& out_h, MaskStats& stats, std::string& error) {
+  if (impl_->model_dir.empty()) {
+    error = "not configured";
+    return false;
+  }
+  if (rgba_bytes == nullptr || w < 1 || h < 1) {
+    error = "empty image";
+    return false;
+  }
+  RgbaImage input{w, h,
+                  std::vector<uint8_t>(rgba_bytes, rgba_bytes + size_t(w) * h * 4)};
+
+  // Same rule as Convert: skip u2net when the input already carries
+  // alpha, so the preview matches the real run exactly.
+  RgbaImage cutout;
+  if (HasValidAlpha(input)) {
+    cutout = input;
+  } else {
+    std::unique_ptr<Ort::Session> u2net;
+    if (!impl_->MakeSession(impl_->model_dir + "/u2net.onnx", false, 4, u2net,
+                            error))
+      return false;
+    std::vector<uint8_t> rgb(static_cast<size_t>(w) * h * 3);
+    for (int i = 0; i < w * h; ++i) {
+      rgb[i * 3 + 0] = rgba_bytes[i * 4 + 0];
+      rgb[i * 3 + 1] = rgba_bytes[i * 4 + 1];
+      rgb[i * 3 + 2] = rgba_bytes[i * 4 + 2];
+    }
+    U2netQuery q{&impl_->env, &impl_->mem, u2net.get()};
+    try {
+      cutout = RemoveBackgroundU2net(rgb.data(), w, h, &U2netQuery::Run, &q);
+    } catch (const Ort::Exception& e) {
+      error = std::string("u2net: ") + e.what();
+      return false;
+    }
+    u2net.reset();
+  }
+
+  // Stats come from the original-size cutout alpha (the prepared canvas
+  // is cropped to the subject, so everything would touch its border).
+  std::vector<uint8_t> alpha(static_cast<size_t>(cutout.w) * cutout.h);
+  for (int i = 0; i < cutout.w * cutout.h; ++i)
+    alpha[i] = cutout.px[i * 4 + 3];
+  stats = AnalyzeMask(alpha.data(), cutout.w, cutout.h);
+
+  // The exact canvas Convert feeds DINOv2 (white bg).
+  const float kWhite[3] = {1.0f, 1.0f, 1.0f};
+  std::vector<uint8_t> prepared_u8;
+  RgbFloat prepared = PrepareImage(cutout, kWhite, prepared_u8);
+  if (prepared.w == 0 || prepared.h == 0 || prepared_u8.empty()) {
+    error = "input image too small";
+    return false;
+  }
+  out_rgb = std::move(prepared_u8);
+  out_w = prepared.w;
+  out_h = prepared.h;
+  return true;
+}
+
 void Engine::Release() {
   impl_->chain_sess.reset();
   impl_->merged = false;
@@ -410,46 +511,6 @@ class NpuQueryCancel : public QueryBackend {
   const Tensor& kv_;
   int chunk_;
   std::atomic<bool>& cancel_;
-};
-
-// u2net query shim for RemoveBackgroundU2net.
-struct U2netQuery {
-  Ort::Env* env;
-  Ort::MemoryInfo* mem;
-  Ort::Session* session;
-  static void Run(const float* nchw, float* out, int out_n, void* user) {
-    auto* q = static_cast<U2netQuery*>(user);
-    Ort::AllocatorWithDefaultOptions alloc;
-    std::string in_name =
-        q->session->GetInputNameAllocated(0, alloc).get();
-    std::string out_name =
-        q->session->GetOutputNameAllocated(0, alloc).get();
-    auto in_shape = q->session->GetInputTypeInfo(0)
-                        .GetTensorTypeAndShapeInfo()
-                        .GetShape();
-    if (in_shape != std::vector<int64_t>({1, 3, 320, 320})) {
-      std::fprintf(stderr, "u2net input is not (1,3,320,320)\n");
-      std::exit(1);
-    }
-    std::vector<int64_t> shape = in_shape;
-    const char* in_names[1] = {in_name.c_str()};
-    const char* out_names[1] = {out_name.c_str()};
-    Ort::Value in = Ort::Value::CreateTensor<float>(
-        *q->mem, const_cast<float*>(nchw), Numel(shape), shape.data(),
-        shape.size());
-    std::vector<Ort::Value> outs = q->session->Run(
-        Ort::RunOptions{nullptr}, in_names, &in, 1, out_names, 1);
-    auto got_shape = outs[0].GetTensorTypeAndShapeInfo().GetShape();
-    float* fp = outs[0].GetTensorMutableData<float>();
-    // Channel 0 of the single output: in NCHW it is the first block.
-    size_t total = Numel(got_shape);
-    if (total < static_cast<size_t>(out_n) ||
-        total % static_cast<size_t>(out_n) != 0) {
-      std::fprintf(stderr, "u2net output size %zu, want %d\n", total, out_n);
-      std::exit(1);
-    }
-    std::memcpy(out, fp, static_cast<size_t>(out_n) * 4);
-  }
 };
 
 // Deterministic Gaussian noise (mt19937_64 + Box-Muller). This cannot

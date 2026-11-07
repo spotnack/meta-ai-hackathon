@@ -8,9 +8,9 @@
  * set and a downloaded set are interchangeable.
  * @typedef {object} ModelManagementPort
  * @property {() => Promise<ModelManagementState>} getState - Derives the current state from the device (no caching: restart-safe).
- * @property {(options?: {allowMetered?: boolean}) => Promise<ModelManagementState>} startDownload - Downloads missing files (resumes partials). Rejects with ModelMeteredNetworkError on a metered link without allowMetered, ModelSpaceError when the disk cannot hold the remainder, ModelSideloadRequiredError when no base URL is configured.
+ * @property {(options?: {allowMetered?: boolean, onStarted?: function(ModelManagementState): void}) => Promise<ModelManagementState>} startDownload - Downloads missing files (resumes partials); onStarted fires once the download is running, with the Downloading state. Rejects with ModelMeteredNetworkError on a metered link without allowMetered, ModelSpaceError when the disk cannot hold the remainder, ModelSideloadRequiredError when no base URL is configured.
  * @property {() => Promise<ModelManagementState>} pauseDownload - Pauses a running download (re-call startDownload to resume, including after a restart).
- * @property {() => Promise<ModelManagementState>} verifyModels - Full SHA-256 verification (~7 GB streamed on-device); corrupt files mark the set corrupt.
+ * @property {(options?: {onStarted?: function(ModelManagementState): void}) => Promise<ModelManagementState>} verifyModels - Full SHA-256 verification (~7 GB streamed on-device); corrupt files mark the set corrupt. onStarted fires at once with the Verifying state.
  * @property {() => Promise<ModelManagementState>} deleteModels - Deletes the installed (or partial) model dir.
  */
 
@@ -21,6 +21,7 @@
  * @property {number} downloadedBytes - Bytes already on disk for the version.
  * @property {number} totalBytes - Manifest total for the version.
  * @property {string|null} reason - Human-readable detail (unsupported reason, corrupt file, sideload hint).
+ * @property {boolean} fullyVerified - True when INSTALLED and a full SHA-256 verification passed in this app session.
  */
 
 export const MODEL_STATUS = Object.freeze({

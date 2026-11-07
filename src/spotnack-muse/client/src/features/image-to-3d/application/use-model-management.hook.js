@@ -6,7 +6,7 @@ import {
   MODEL_STATUS,
 } from "../domain/model-management.port";
 import { modelManagementAdapter } from "../infrastructure/model-management.adapter";
-import { isOndeviceImageTo3dMode } from "../infrastructure/demo-goldens.config";
+import { isOndeviceImageTo3dMode } from "../infrastructure/image-to-3d-mode.config";
 
 const INITIAL_STATE = Object.freeze({
   status: MODEL_STATUS.NOT_INSTALLED,
@@ -14,6 +14,7 @@ const INITIAL_STATE = Object.freeze({
   downloadedBytes: 0,
   totalBytes: 0,
   reason: null,
+  fullyVerified: false,
 });
 
 /**
@@ -23,11 +24,15 @@ const INITIAL_STATE = Object.freeze({
  * event, so a restart mid-download shows PAUSED with its bytes intact.
  * Outside on-device mode the state stays INITIAL_STATE and every action
  * is a no-op (the card hides the row).
- * @returns {{ modelState: object, actionError: string|null, isWorking: boolean, needsMeteredConfirm: boolean, modelsReady: boolean, refreshModels: function(): Promise<void>, startDownload: function(object?): Promise<void>, pauseDownload: function(): Promise<void>, verifyModels: function(): Promise<void>, deleteModels: function(): Promise<void> }} Model state and actions.
+ * @returns {{ modelState: object, actionError: string|null, actionNotice: string|null, isWorking: boolean, needsMeteredConfirm: boolean, modelsReady: boolean, refreshModels: function(): Promise<void>, startDownload: function(object?): Promise<void>, pauseDownload: function(): Promise<void>, verifyModels: function(): Promise<void>, deleteModels: function(): Promise<void>, dismissActionNotice: function(): void }} Model state and actions.
  */
 export const useModelManagement = () => {
   const [modelState, setModelState] = useState(INITIAL_STATE);
   const [actionError, setActionError] = useState(null);
+  // Pop-up confirmation after an action that otherwise ends in the same
+  // "ready" row it started from (a passed Verify). Cleared by
+  // dismissActionNotice.
+  const [actionNotice, setActionNotice] = useState(null);
   const [isWorking, setIsWorking] = useState(false);
   // Set when startDownload refuses a metered link: the card offers
   // "Download anyway" (startDownload({ allowMetered: true })).
@@ -57,10 +62,15 @@ export const useModelManagement = () => {
     refreshModels();
     const subscription = addDownloadProgressListener((event) => {
       if (!mounted.current) return;
+      // Progress events only fire while a download runs, so they also
+      // switch a stale Not downloaded / Paused row to Downloading.
       setModelState((prev) =>
-        prev.status === MODEL_STATUS.DOWNLOADING
+        prev.status === MODEL_STATUS.DOWNLOADING ||
+        prev.status === MODEL_STATUS.NOT_INSTALLED ||
+        prev.status === MODEL_STATUS.PAUSED
           ? {
             ...prev,
+            status: MODEL_STATUS.DOWNLOADING,
             downloadedBytes: event.downloadedBytes,
             totalBytes: event.totalBytes,
           }
@@ -79,6 +89,7 @@ export const useModelManagement = () => {
       try {
         const state = await action();
         if (mounted.current) setModelState(state);
+        return state;
       } catch (err) {
         if (mounted.current) {
           setActionError(err?.message ?? "Model action failed.");
@@ -94,17 +105,36 @@ export const useModelManagement = () => {
   );
 
   const startDownload = useCallback(
-    (options) => runAction(() => modelManagementAdapter.startDownload(options)),
+    (options) =>
+      runAction(() =>
+        modelManagementAdapter.startDownload({
+          ...options,
+          onStarted: (state) => {
+            if (mounted.current) setModelState(state);
+          },
+        }),
+      ),
     [runAction],
   );
   const pauseDownload = useCallback(
     () => runAction(() => modelManagementAdapter.pauseDownload()),
     [runAction],
   );
-  const verifyModels = useCallback(
-    () => runAction(() => modelManagementAdapter.verifyModels()),
-    [runAction],
-  );
+  const verifyModels = useCallback(async () => {
+    const state = await runAction(() =>
+      modelManagementAdapter.verifyModels({
+        onStarted: (started) => {
+          if (mounted.current) setModelState(started);
+        },
+      }),
+    );
+    // A failure shows as the Corrupt row. A pass ends on the same "ready"
+    // row it started from, so say it passed.
+    if (mounted.current && state?.status === MODEL_STATUS.INSTALLED) {
+      setActionNotice("Every TripoSG QNN model file matches its SHA-256 hash.");
+    }
+  }, [runAction]);
+  const dismissActionNotice = useCallback(() => setActionNotice(null), []);
   const deleteModels = useCallback(
     () => runAction(() => modelManagementAdapter.deleteModels()),
     [runAction],
@@ -113,6 +143,7 @@ export const useModelManagement = () => {
   return {
     modelState,
     actionError,
+    actionNotice,
     isWorking,
     needsMeteredConfirm,
     modelsReady: modelState.status === MODEL_STATUS.INSTALLED,
@@ -121,5 +152,6 @@ export const useModelManagement = () => {
     pauseDownload,
     verifyModels,
     deleteModels,
+    dismissActionNotice,
   };
 };

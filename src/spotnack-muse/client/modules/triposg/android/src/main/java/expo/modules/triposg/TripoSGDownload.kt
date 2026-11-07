@@ -63,11 +63,34 @@ class ModelDownloader(
         return@forEachIndexed
       }
       final.parentFile?.mkdirs()
-      val problem = downloadOne(spec, stop) { chunk ->
-        done += chunk
-        onProgress(Progress(done, totalBytes, spec.path, index, files.size))
+      var attempt = 0
+      while (true) {
+        // Bytes this attempt adds; a retry resumes from the .part file.
+        val before = done
+        val problem = try {
+          downloadOne(spec, stop) { chunk ->
+            done += chunk
+            onProgress(Progress(done, totalBytes, spec.path, index, files.size))
+          }
+        } catch (e: java.io.IOException) {
+          // Connect / response errors (no network, DNS, reset).
+          "$RETRY${spec.path}: ${e.message ?: "network error"}"
+        }
+        if (problem == null) break
+        if (!problem.startsWith(RETRY)) return problem
+        // Progress made since the last failure resets the budget.
+        if (done > before) attempt = 0
+        if (attempt >= RETRY_DELAYS_S.size) return problem.removePrefix(RETRY)
+        Log.w("TripoSG", "download retry ${attempt + 1}: ${problem.removePrefix(RETRY)}")
+        val waitUntil = System.currentTimeMillis() + RETRY_DELAYS_S[attempt] * 1000L
+        attempt++
+        while (System.currentTimeMillis() < waitUntil) {
+          if (stop()) return "paused"
+          Thread.sleep(250)
+        }
+        // Count from the disk again: a failed hash deletes its .part.
+        done = diskProgress().downloadedBytes
       }
-      if (problem != null) return problem
       if (stop()) return "paused"
     }
     writeManifest()
@@ -98,7 +121,9 @@ class ModelDownloader(
     ) {
       val code = connection.responseCode
       connection.disconnect()
-      return "http $code for ${spec.path}"
+      // Server-side hiccups (429, 5xx) are worth another try.
+      val retry = if (code == 429 || code >= 500) RETRY else ""
+      return "${retry}http $code for ${spec.path}"
     }
     try {
       val append = connection.responseCode == HttpURLConnection.HTTP_PARTIAL
@@ -123,6 +148,10 @@ class ModelDownloader(
           }
         }
       }
+    } catch (e: java.io.IOException) {
+      // A dropped connection mid-file: the .part keeps what arrived.
+      connection.disconnect()
+      return "$RETRY${spec.path}: ${e.message ?: "download failed"}"
     } catch (e: Exception) {
       connection.disconnect()
       return "${spec.path}: ${e.message ?: "download failed"}"
@@ -163,6 +192,13 @@ class ModelDownloader(
   }
 
   companion object {
+    // Marks a transient failure that run() retries (resuming the .part).
+    private const val RETRY = "retry:"
+    // Waits between retries of one file, in seconds. Any new bytes reset
+    // the count, so only a link that stays down this long (~2.5 min)
+    // fails the download.
+    private val RETRY_DELAYS_S = longArrayOf(2, 5, 10, 20, 30, 60)
+
     fun sha256Hex(file: File, stop: () -> Boolean = { false }): String? {
       return try {
         val digest = MessageDigest.getInstance("SHA-256")

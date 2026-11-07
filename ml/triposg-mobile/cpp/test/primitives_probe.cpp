@@ -16,6 +16,8 @@
 //     (H,W,4) RGBA cutout -> PrepareImage (white bg) -> (H',W',3) u8
 //   probe dinopixels PREPARED.npy OUT.npy
 //     (H,W,3) u8 canvas -> Dinov2PixelValues -> float32 (1,3,224,224)
+//   probe maskstats ALPHA.npy
+//     (H,W) u8 alpha -> prints "BORDER AREA BIG" (AnalyzeMask)
 #include <cstdint>
 #include <cstdio>
 #include <string>
@@ -145,13 +147,28 @@ int OpDinoPixels(int argc, char** argv) {
   return 0;
 }
 
+int OpMaskStats(int argc, char** argv) {
+  // probe maskstats ALPHA.npy -> prints "BORDER AREA BIG" (mask quality
+  // stats for the cut-out preview warnings; graded by check_primitives).
+  if (argc != 3) return Fail("usage: probe maskstats ALPHA");
+  std::vector<int64_t> shape;
+  std::vector<uint8_t> data;
+  if (!ReadU8(argv[2], shape, data)) return 1;
+  if (shape.size() != 2) return Fail("ALPHA must be (H,W)");
+  triposg::MaskStats st = triposg::AnalyzeMask(
+      data.data(), static_cast<int>(shape[1]), static_cast<int>(shape[0]));
+  std::printf("%.6f %.6f %d\n", st.border_touch, st.area_frac,
+              st.big_components);
+  return 0;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
   if (argc < 2) {
     std::fprintf(stderr,
                  "usage: probe resize|composite|area|dinosize|prepare|"
-                 "dinopixels ...\n");
+                 "dinopixels|maskstats ...\n");
     return 1;
   }
   std::string op = argv[1];
@@ -162,6 +179,7 @@ int main(int argc, char** argv) {
   if (op == "dinosize") return OpDinosize(argc, argv);
   if (op == "prepare") return OpPrepare(argc, argv);
   if (op == "dinopixels") return OpDinoPixels(argc, argv);
+  if (op == "maskstats") return OpMaskStats(argc, argv);
   std::fprintf(stderr, "probe: unknown op %s\n", op.c_str());
   return 1;
 }

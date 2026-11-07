@@ -39,11 +39,15 @@ export const DialogTitle = styled(ThemedText)`
   font-weight: 700;
 `;
 
+// Theme colors come in as props: $textColor, $backgroundColor, $borderColor.
 export const NameInput = styled(TextInput)`
   border-radius: ${COMPACT_SPACING}px;
   border-width: 1px;
   padding: ${COMPACT_SPACING}px;
   font-size: 16px;
+  color: ${({ $textColor }) => $textColor};
+  background-color: ${({ $backgroundColor }) => $backgroundColor};
+  border-color: ${({ $borderColor }) => $borderColor};
 `;
 
 export const ErrorText = styled(ThemedText).attrs({ type: "small" })`
@@ -63,6 +67,7 @@ export const ActionButton = styled(TouchableOpacity)`
   min-height: ${Size.four}px;
   align-items: center;
   justify-content: center;
+  opacity: ${({ $dimmed }) => ($dimmed ? 0.4 : 1)};
 `;
 
 export const SaveText = styled(ThemedText).attrs({ type: "smallBold" })`

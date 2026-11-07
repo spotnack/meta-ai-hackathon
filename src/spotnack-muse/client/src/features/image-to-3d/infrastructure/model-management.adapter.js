@@ -47,6 +47,9 @@ let downloadActive = false;
 let verifyingActive = false;
 // Remembers a failed full verification until the next download/delete.
 let corruptProblem = null;
+// True after a full verification passed in this app process (the card then
+// labels the button Verified). Cleared by a download, delete or failure.
+let fullyVerified = false;
 
 const baseState = (status, downloadedBytes, reason = null) => ({
   status,
@@ -54,6 +57,7 @@ const baseState = (status, downloadedBytes, reason = null) => ({
   downloadedBytes,
   totalBytes: MANIFEST.totalBytes,
   reason,
+  fullyVerified: status === MODEL_STATUS.INSTALLED && fullyVerified,
 });
 
 const diskProgress = async () => {
@@ -116,7 +120,10 @@ const deriveState = async () => {
 export const modelManagementAdapter = {
   getState: () => deriveState(),
 
-  startDownload: async ({ allowMetered = false } = {}) => {
+  startDownload: async ({ allowMetered = false, onStarted } = {}) => {
+    // A second tap while a download runs would make the native side refuse
+    // ("already running") and clear downloadActive: report the live state.
+    if (downloadActive) return deriveState();
     const baseUrl = getModelBaseUrl();
     if (!baseUrl) throw new ModelSideloadRequiredError();
     const status = await getStatus();
@@ -146,7 +153,11 @@ export const modelManagementAdapter = {
       await deleteModels({});
     }
     corruptProblem = null;
+    fullyVerified = false;
     downloadActive = true;
+    // The native call only returns when the whole download ends, so tell
+    // the caller now that it is running (the card switches to Downloading).
+    onStarted?.(baseState(MODEL_STATUS.DOWNLOADING, downloadedBytes));
     try {
       const outcome = await startDownload({
         baseUrl,
@@ -168,14 +179,20 @@ export const modelManagementAdapter = {
     return deriveState();
   },
 
-  verifyModels: async () => {
+  verifyModels: async ({ onStarted } = {}) => {
+    if (verifyingActive) return deriveState();
     verifyingActive = true;
+    // The native check only returns when all files are hashed (minutes):
+    // tell the caller now so the card shows Verifying.
+    onStarted?.(baseState(MODEL_STATUS.VERIFYING, MANIFEST.totalBytes));
     try {
       const outcome = await verifyModels({ full: true });
       if (outcome.ok) {
         corruptProblem = null;
+        fullyVerified = true;
       } else if (outcome.problem !== "cancelled") {
         corruptProblem = outcome.problem ?? "verification failed";
+        fullyVerified = false;
       }
     } finally {
       verifyingActive = false;
@@ -185,6 +202,7 @@ export const modelManagementAdapter = {
 
   deleteModels: async () => {
     corruptProblem = null;
+    fullyVerified = false;
     await deleteModels({ version: MANIFEST.version });
     return deriveState();
   },

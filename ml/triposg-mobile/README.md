@@ -95,7 +95,7 @@ per-component evidence in `eval/matrix.md`, raw logs in `logs/phase2/`.
 ### w8a16 DiT (NPU-memory follow-up)
 
 The FP32 chain pins ~9 GB of unswappable DMA-BUF and HyperOS kills the
-app for it (see `docs/ai_pipeline.md` "NPU memory"). The quantized chain
+app for it (see `docs/ai_pipeline_logs.md` "NPU memory"). The quantized chain
 (int8 weights / uint16 activations, VAE stays FP32) targets ≲ 3 GB with
 the same 50-step mesh gate. Capture is the only heavy laptop job
 (~0.5–1.5 h per golden); quantization + compile are light:
@@ -127,7 +127,7 @@ SERIAL=<serial> VERSION=v2-w8a16-50step AIHUB=ml/triposg-mobile/logs/spike/aihub
 
 w8a16 concluded not worth it (saves only ~0.5 GB: the runlist grows to
 133 MB and spill-fill to ~210 MB per block; 15% slower plus quality
-risk — see `docs/ai_pipeline.md` "One merged NPU session"). FP16 does
+risk — see `docs/ai_pipeline_logs.md` "One merged NPU session"). FP16 does
 not help either (QNN still pins 245 MB of weights per block). Instead,
 one FP32 session shares a single spill-fill buffer: 9.0 GB → **7.14 GB**
 peak DMA-BUF, row pass 2.07 s → ~1.6 s, bit-identical output. Recipe
@@ -203,6 +203,44 @@ APP_VARIANT=ondevice npx expo run:android --variant release
 installs next to the preview build without uninstalling it. Without the
 env var the config is exactly `app.json`.)
 
-Then open the `/dev-triposg` route and read `adb logcat` for the
-`[dev-triposg]` lines. Lint/typecheck the JS: `yarn lint` and
-`npx tsc --noEmit` from `client/`.
+Then trigger a conversion without the UI (the `/dev-triposg` route is
+deleted; the debug receiver replaced it) and read `adb logcat` for the
+`TripoSG` / `TripoSGDebug` lines. Lint/typecheck the JS: `yarn lint`
+and `npx tsc --noEmit` from `client/`.
+
+## Reproduce Phase 4 (from the repo root, you run this)
+
+Golden-noise parity of the app's own C++ core vs the 5 GPU goldens.
+Needs a debuggable build (the receiver refuses otherwise) — no
+hand-editing of `android/`, set the env var for prebuild:
+
+```sh
+cd src/spotnack-muse/client && yarn install
+TRIPOSG_DEBUGGABLE=1 APP_VARIANT=ondevice npx expo prebuild -p android
+TRIPOSG_DEBUGGABLE=1 APP_VARIANT=ondevice npx expo run:android --variant release
+```
+
+Then, per golden id. The receiver takes a batch-1 (1,2048,64) float32
+`.npy`; slice it from row 0 of the golden's batch-2
+`step0_latent_model_input.npy` (the same row Phase 2 seeds from) and
+push it to the device first:
+
+```sh
+~/anaconda3/envs/triposg-spike/bin/python -c "import numpy as np; np.save('/tmp/noise_<id>.npy', np.load('ml/triposg-mobile/reference/goldens_5/<id>/step0_latent_model_input.npy')[0:1])"
+adb push /tmp/noise_<id>.npy /sdcard/Download/noise_<id>.npy
+adb shell am broadcast -a expo.modules.triposg.DEBUG_CONVERT -e noise /sdcard/Download/noise_<id>.npy -e tag <id>
+adb logcat -s TripoSGDebug   # one TIMINGS line at DONE
+```
+
+Pull each run's `mesh.glb` + `mesh.display.glb` out of the app cache
+`triposg/debug/<id>/` (e.g. via `run-as` on the debuggable build)
+into `<cand>/<id>/`, then grade:
+
+```sh
+~/anaconda3/envs/triposg-spike/bin/python -u ml/triposg-mobile/parity/run_phase1.py --candidate-dir <cand>
+```
+
+Phase 4 result: OVERALL PASS on all 5 ids for both meshes
+(`logs/phase4/parity_inapp_core/phase1_report.md`). The 5 runs were
+back to back, so expect thermal drift in the totals (≈177 s cool,
+≈233 s warm).

@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import {
   clearJob,
   getPendingJob,
+  previewCutout,
 } from "@spotnack/triposg";
+import { useAuth } from "@features/auth/application/auth.context";
 import { useGeneratedShapesContext } from "@features/generated-shapes/application/generated-shapes.context";
 import { buildGeneratedShapeName } from "@features/generated-shapes/domain/generated-shapes.entity";
+import { warningsForCutoutStats } from "../infrastructure/cutout-warnings";
 
 import {
   CONVERSION_STATUS,
@@ -17,8 +21,6 @@ import {
 } from "../domain/image-to-3d-conversion.entity";
 import { imageLibraryAdapter } from "../infrastructure/image-library.adapter";
 import { placeholderImageTo3dAdapter } from "../infrastructure/placeholder-image-to-3d.adapter";
-import { demoGoldensImageSourceAdapter } from "../infrastructure/demo-goldens-image-source.adapter";
-import { demoGoldensImageTo3dAdapter } from "../infrastructure/demo-goldens-image-to-3d.adapter";
 import {
   GENERATOR_ID as TRIPOSG_GENERATOR_ID,
   assertValidJobMeshes,
@@ -26,26 +28,16 @@ import {
   copyCompletedDisplayMesh,
   triposgImageTo3dAdapter,
 } from "../infrastructure/triposg-image-to-3d.adapter";
-import {
-  isDemoImageTo3dMode,
-  isOndeviceImageTo3dMode,
-} from "../infrastructure/demo-goldens.config";
+import { isOndeviceImageTo3dMode } from "../infrastructure/image-to-3d-mode.config";
 import { planPersistedJob } from "./persisted-job-plan";
 
-// Demo mode (EXPO_PUBLIC_IMAGE_TO_3D_MODE=demo) adds the cloud-GPU goldens next to the gallery for the
-// hackathon demo. On-device mode (EXPO_PUBLIC_IMAGE_TO_3D_MODE=ondevice) sends gallery photos to the
-// real TripoSG module when the device is supported and the models are installed; when either is missing
-// the conversion falls back to the placeholder (the model-status row explains why), and demo goldens
-// keep their adapter in every mode.
-const isDemoMode = isDemoImageTo3dMode();
+// On-device mode (EXPO_PUBLIC_IMAGE_TO_3D_MODE=ondevice) sends gallery photos to the real TripoSG
+// module when the device is supported and the models are installed; when either is missing the
+// conversion falls back to the placeholder (the model-status row explains why).
 const isOndeviceMode = isOndeviceImageTo3dMode();
 
-// Golden inputs carry demoGoldenId, so each image is converted by the adapter matching its source.
-const imageTo3dPortFor = (image) => {
-  if (image?.demoGoldenId) return demoGoldensImageTo3dAdapter;
-  if (isOndeviceMode) return triposgImageTo3dAdapter;
-  return placeholderImageTo3dAdapter;
-};
+const imageTo3dPortFor = () =>
+  isOndeviceMode ? triposgImageTo3dAdapter : placeholderImageTo3dAdapter;
 
 const INITIAL_PROGRESS = { fraction: 0, label: "" };
 
@@ -59,10 +51,11 @@ const INITIAL_PROGRESS = { fraction: 0, label: "" };
  * reattaches to its events, and mounting with a finished job completes its
  * save exactly like a normal completion. Conversion stops only on the user's
  * Cancel, on error, or if the OS kills the service — never on backgrounding.
- * @returns {{ selectedImage: object|null, status: string, progress: {fraction: number, label: string}, error: {message: string, canOpenSettings: boolean}|null, isPicking: boolean, isConverting: boolean, isCancelling: boolean, canConvert: boolean, canPickDemoImage: boolean, pickImage: function(): Promise<void>, pickDemoImage: function(): Promise<void>, clearImage: function(): void, convert: function(): Promise<void>, cancelConversion: function(): void }} Conversion state and actions.
+ * @returns {{ selectedImage: object|null, status: string, progress: {fraction: number, label: string}, error: {message: string, canOpenSettings: boolean}|null, isPicking: boolean, isConverting: boolean, isCancelling: boolean, canConvert: boolean, cutout: object|null, cutoutWorking: boolean, highDetail: boolean, setHighDetail: function(boolean): void, pickImage: function(): Promise<void>, clearImage: function(): void, convert: function(): Promise<void>, cancelConversion: function(): void }} Conversion state and actions.
  */
 export const useImageTo3dConversion = () => {
   const { create, remove } = useGeneratedShapesContext();
+  const { user } = useAuth();
 
   const [selectedImage, setSelectedImage] = useState(null);
   const [status, setStatus] = useState(CONVERSION_STATUS.IDLE);
@@ -70,6 +63,13 @@ export const useImageTo3dConversion = () => {
   const [error, setError] = useState(null);
   const [isPicking, setIsPicking] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  // Cut-out preview of the picked photo (exact DINOv2 canvas + input
+  // warnings), computed natively after each pick. Null while computing,
+  // failed, or in modes without the on-device module.
+  const [cutout, setCutout] = useState(null);
+  const [cutoutWorking, setCutoutWorking] = useState(false);
+  // High-detail extraction (d1 9 instead of 8), persisted per user.
+  const [highDetail, setHighDetailState] = useState(false);
 
   // Guards against double taps landing before the re-render that disables the buttons.
   const isBusy = useRef(false);
@@ -77,6 +77,30 @@ export const useImageTo3dConversion = () => {
   const conversionAbortController = useRef(null);
   // Guards the mount resume against StrictMode double effects.
   const resumeStarted = useRef(false);
+  // Ignores stale cut-out results after a newer pick or a clear.
+  const cutoutGen = useRef(0);
+
+  // Load this user's high-detail preference when they sign in; default
+  // off on sign-out. Same per-user AsyncStorage pattern as favourites.
+  useEffect(() => {
+    if (!user?.id) {
+      setHighDetailState(false);
+      return;
+    }
+    AsyncStorage.getItem(`@imageTo3d:highDetail:${user.id}`)
+      .then((json) => setHighDetailState(json === "true"))
+      .catch(() => setHighDetailState(false));
+  }, [user?.id]);
+
+  const setHighDetail = useCallback((next) => {
+    setHighDetailState(next);
+    if (user?.id) {
+      AsyncStorage.setItem(
+        `@imageTo3d:highDetail:${user.id}`,
+        next ? "true" : "false",
+      ).catch(() => {});
+    }
+  }, [user?.id]);
 
   // Leaving the screen (e.g. signing out) stops a running conversion: the
   // save pipeline (create/remove below) is torn down with it. Backgrounding
@@ -219,6 +243,36 @@ export const useImageTo3dConversion = () => {
     };
   }, [reportProgress, settleResult]);
 
+  // Cut-out preview after a pick: the exact canvas the pipeline would
+  // feed DINOv2, plus input warnings. On-device Android only; anywhere
+  // else (or on any failure) the card keeps showing the original photo.
+  // The conversion recomputes it — no bit-sharing, no stale cache.
+  const computeCutout = useCallback(async (image) => {
+    const gen = cutoutGen.current + 1;
+    cutoutGen.current = gen;
+    setCutout(null);
+    if (!isOndeviceMode || Platform.OS !== "android" || !image?.uri) return;
+    setCutoutWorking(true);
+    try {
+      const preview = await previewCutout(image.uri);
+      if (cutoutGen.current !== gen) return;
+      if (!preview) return;
+      setCutout({
+        uri: preview.uri,
+        width: preview.width,
+        height: preview.height,
+        stats: {
+          borderTouch: preview.borderTouch,
+          bigComponents: preview.bigComponents,
+          maskAreaFrac: preview.maskAreaFrac,
+        },
+        warnings: warningsForCutoutStats(preview),
+      });
+    } finally {
+      if (cutoutGen.current === gen) setCutoutWorking(false);
+    }
+  }, []);
+
   const pickFrom = useCallback(async (imageSourcePort) => {
     if (isBusy.current) return;
     isBusy.current = true;
@@ -231,6 +285,7 @@ export const useImageTo3dConversion = () => {
       setStatus(CONVERSION_STATUS.IDLE);
       setProgress(INITIAL_PROGRESS);
       setError(null);
+      computeCutout(image);
     } catch (err) {
       setError({
         message:
@@ -244,19 +299,16 @@ export const useImageTo3dConversion = () => {
       setIsPicking(false);
       isBusy.current = false;
     }
-  }, []);
+  }, [computeCutout]);
 
   const pickImage = useCallback(() => pickFrom(imageLibraryAdapter), [pickFrom]);
 
-  // Demo mode only: cycles to the next of the 5 cloud-GPU golden inputs.
-  const pickDemoImage = useCallback(
-    () => pickFrom(demoGoldensImageSourceAdapter),
-    [pickFrom],
-  );
-
   const clearImage = useCallback(() => {
     if (isBusy.current) return;
+    cutoutGen.current += 1;
     setSelectedImage(null);
+    setCutout(null);
+    setCutoutWorking(false);
     setStatus(CONVERSION_STATUS.IDLE);
     setProgress(INITIAL_PROGRESS);
     setError(null);
@@ -275,6 +327,7 @@ export const useImageTo3dConversion = () => {
       image: selectedImage,
       signal: abortController.signal,
       onProgress: reportProgress,
+      depth: highDetail ? { d0: 6, d1: 9 } : { d0: 6, d1: 8 },
     };
     const getResult = async () => {
       try {
@@ -290,7 +343,7 @@ export const useImageTo3dConversion = () => {
       }
     };
     await settleResult(getResult(), selectedImage, abortController);
-  }, [selectedImage, reportProgress, settleResult]);
+  }, [selectedImage, reportProgress, settleResult, highDetail]);
 
   const cancelConversion = useCallback(() => {
     const abortController = conversionAbortController.current;
@@ -308,9 +361,11 @@ export const useImageTo3dConversion = () => {
     isConverting,
     isCancelling,
     canConvert: Boolean(selectedImage) && !isConverting && !isPicking,
-    canPickDemoImage: isDemoMode,
+    cutout,
+    cutoutWorking,
+    highDetail,
+    setHighDetail,
     pickImage,
-    pickDemoImage,
     clearImage,
     convert,
     cancelConversion,

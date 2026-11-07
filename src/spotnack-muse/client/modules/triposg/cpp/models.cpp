@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <cstring>
 #include <sys/stat.h>
+#include <vector>
 
 namespace triposg {
 namespace {
@@ -199,10 +200,12 @@ bool HashFile(const std::string& path, std::string& hex,
   if (!f) return false;
   Sha256 sha;
   bool cancelled = false;
-  uint8_t chunk[1 << 20];
+  // On the heap: 1 MB on the stack overflows a plain Java thread's
+  // ~1 MB stack (full Verify runs on one) and kills the app.
+  std::vector<uint8_t> chunk(1 << 20);
   size_t n;
-  while ((n = std::fread(chunk, 1, sizeof(chunk), f)) > 0) {
-    sha.Update(chunk, n, &cancel, &cancelled);
+  while ((n = std::fread(chunk.data(), 1, chunk.size(), f)) > 0) {
+    sha.Update(chunk.data(), n, &cancel, &cancelled);
     if (cancelled) break;
   }
   std::fclose(f);

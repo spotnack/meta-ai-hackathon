@@ -2,6 +2,8 @@
 
 [![SonarQube Cloud](https://sonarcloud.io/images/project_badges/sonarcloud-light.svg)](https://sonarcloud.io/summary/new_code?id=spotnack_meta-ai-hackathon)
 
+[![Model](https://img.shields.io/badge/%F0%9F%A4%97%20Model-TripoSG--sm8750-yellow.svg)](https://huggingface.co/spotnack/triposg-sm8750-qnn)
+
 <!-- Sonar Badges -->
 
 [![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=spotnack_meta-ai-hackathon&metric=ncloc&token=50819a91c44fdf3711563b72fcb9c92f660a35ea)](https://sonarcloud.io/summary/new_code?id=spotnack_meta-ai-hackathon)
@@ -59,13 +61,13 @@
 <!-- Title: -->
 <div align='center'>
   <h1> Meta Global AI Developer Hackathon </h1>
-  <h2> On-Device AI Inference Pipeline for Image-to-3D Rectified-Flow Transformers Models </h2>
+  <h2> On-Device AI Inference Pipeline for Image-to-3D Rectified-Flow Transformers </h2>
 </div>
 
 <!-- Demo: -->
 <div align='center'>
-  <h2><a href="https://youtube.com/shorts/RXwqbcoATZQ"> Watch the Demo Video </a></h2>
-  <h2><a href="https://expo.dev/accounts/camponogaralucas/projects/client/builds/464e3a39-ff48-4e2a-ab2d-d7be25ba3034"> Try the Preview Build on Your own Device </a></h2>
+  <h2><a href="https://youtube.com/shorts/laTVx9NDBKc?feature=share"> Watch the Demo Video </a></h2>
+  <h2><a href="https://expo.dev/accounts/camponogaralucas/projects/client/builds/e586a265-e693-44bf-8585-073268ed151f"> Try the Preview Build on Your own Device (AI Model Available) </a></h2>
 </div>
 
 # Table of Contents
@@ -74,10 +76,12 @@
 - [Motivation](#motivation)
 - [Updates](#updates)
 - [To Do](#todo)
-- [Architecture](#architecture)
+- [Mobile App Architecture](#mobile-app-architecture)
 - [On-Device AI Inference Pipeline](#pipeline)
+- [Benchmarks](#benchmarks)
 - [Install Dependencies](#dependencies)
 - [Run the Mobile App](#run)
+- [Reproduce From Scratch](#reproduce)
 - [Contribution Guidelines](#contribution)
 - [References](#references)
 
@@ -85,7 +89,7 @@
 
 # About
 
-This repository presents a mobile application with an on-device AI inference pipeline for 3D shape synthesis using an image-to-3D [Rectified-Flow Transformer](https://arxiv.org/pdf/2403.03206) model optimized to run in mobile applications.
+sitory presents a mobile application with an on-device AI inference pipeline for 3D shape synthesis using an image-to-3D [Rectified-Flow Transformer](https://arxiv.org/pdf/2403.03206) model optimized to run in mobile applications.
 
 The solution for the AI pipeline was developed during the [Meta Global AI Developer Hackathon](https://cerebralvalley.ai/e/meta-ai-developer-hackathon) using [Muse AI](https://dev.meta.ai/docs/muse-code).
 
@@ -114,6 +118,12 @@ The solution for the AI pipeline was developed during the [Meta Global AI Develo
 
 <p align="center">
   <img src="./assets/8.jpg" width="25%" />
+  <img src="./assets/9.jpg" width="25%" />
+</p>
+
+<p align="center">
+  <img src="./assets/10.jpg" width="25%" />
+  <img src="./assets/11.jpg" width="25%" />
 </p>
 
 ---
@@ -126,7 +136,7 @@ The open-source image-to-3D [TripoSG](https://github.com/VAST-AI-Research/TripoS
 
 During training, ground-truth 3D shape representations are encoded into 2048 latent tokens using a Variational Autoencoder (VAE). During inference, the trained model generates shape latents conditioned on an input image, and the VAE decoder reconstructs the 3D mesh from these latents. The paper also describes scaling the architecture to approximately 4B parameters using a Mixture-of-Experts (MoE) configuration and training at a latent resolution of 4096 tokens.
 
-However, the GitHub repository recommends a CUDA-enabled GPU with at least `8GB of VRAM` for inference. This adds a barrier for users who would like to experiment with large AI models and cannot afford a GPU.
+However, the GitHub repository recommends a CUDA-enabled GPU with at least `8GB of VRAM` for inference, adding a barrier for users who would like to experiment with large AI models on-device.
 
 </details>
 <!-- #endregion -->
@@ -137,77 +147,18 @@ However, the GitHub repository recommends a CUDA-enabled GPU with at least `8GB 
 <details>
   <summary><h1 id="updates">Updates</h1></summary>
 
-Status of the [AI Pipeline Plan](docs/ai_pipeline_plan.md). Full details, sources and logs are in [docs/ai_pipeline.md](docs/ai_pipeline.md).
+Status of the [AI Pipeline Plan](docs/ai_pipeline_plan.md). Full details, sources and logs are in [docs/ai_pipeline_logs.md](docs/ai_pipeline_logs.md).
 
-| Pipeline stage                                    | Status                                                 |
-| ------------------------------------------------- | ------------------------------------------------------ |
-| Feasibility audit (Phase 0)                       | Done                                                   |
-| Golden reference set and parity harness (Phase 1) | Done: 5 images, thresholds fixed, all baselines pass   |
-| DINOv2 image encoder on the phone                 | Done: runs and matches the GPU output                  |
-| Rectified-flow transformer (1.5B) on the phone    | Done (Phase 2): runs on the NPU, ≈5 s per guided step  |
-| VAE decoder and mesh extraction on the phone      | Done (Phase 2): NPU decoder + C++ extraction           |
-| In-app on-device inference                        | Done (Phase 3): photo to mesh in the app, ≈3 min       |
-| NPU memory footprint                              | Done (Phase 3): one merged NPU session, no app kills   |
-
-**Phase 0: feasibility audit.** Every claim about TripoSG was checked against its source code, configs and licenses. The model is a 1.5B-parameter rectified-flow transformer over 2048 latent tokens, conditioned on a DINOv2 image encoder (224×224 input, 257 tokens), followed by an SDF VAE and mesh extraction. In FP32 the transformer weights alone are 5.36 GiB, so a full-precision pipeline cannot fit on a phone: the target is FP16 or INT8 weights, loaded one stage at a time. The background-removal model used by TripoSG, RMBG-1.4, has a non-commercial license, so it is skipped and inputs must be pre-cut images.
-
-**Golden reference set.** [triposg_golden_5.ipynb](ml/triposg-mobile/reference/triposg_golden_5.ipynb) runs the official TripoSG pipeline at FP32 with 50 steps on a Colab T4 GPU, for 5 TripoSG example images cut out with rembg (u2net). It took 413–531 s and about 11 GiB of GPU memory per image. The notebook saves the DINOv2 input and output, the first transformer step's inputs and output, the final latents and the mesh for each image, so every on-device stage can be checked against the GPU result.
-
-**Parity harness (Phase 1).** One command, `python -u ml/triposg-mobile/parity/run_phase1.py`, checks the SHA-256 of every golden file and grades any candidate output against the goldens:
-
-- **Tensors**, for each pipeline stage: max and mean absolute error, relative L2 and cosine similarity.
-- **Meshes:** Chamfer distance, F-score at 1% of the bounding-box diagonal, and volume IoU on a 64³ grid.
-
-The acceptance thresholds were fixed before any optimization and are justified in [THRESHOLDS.md](ml/triposg-mobile/parity/THRESHOLDS.md):
-
-| Stage                | Pass if                                               |
-| -------------------- | ----------------------------------------------------- |
-| One transformer step | cosine ≥ 0.999 and relative L2 ≤ 1e-2                 |
-| Mesh                 | Chamfer/diagonal ≤ 0.01, F-score ≥ 0.9 and IoU ≥ 0.95 |
-
-They were calibrated on two noise baselines for each of the 5 images, the decimated display mesh against the full mesh, and the same mesh sampled with two seeds. Every baseline passes: Chamfer/diagonal 3.5–4.6e-3, F-score 0.97–1.00, IoU ≥ 0.998.
-
-The eval set stays at 5 images. Its size only bounds how confident the parity check is, not on-device speed or quality.
-
-**On-device DINOv2 encoder.** The encoder runs on a Xiaomi 15 Ultra (Snapdragon 8 Elite, 16 GB RAM, Android 16) as an FP32 ONNX model on the onnxruntime 1.22.0 CPU backend (4 threads), using a small NDK benchmark program run over adb:
-
-| Metric                            | Result                                       |
-| --------------------------------- | -------------------------------------------- |
-| Latency (5 runs after 2 warm-ups) | median 1084 ms, p90 1110 ms                  |
-| Peak memory                       | 2.47 GB                                      |
-| Match with the cloud GPU output   | cosine 1.0000001, max abs difference 6.0e-05 |
-| Thermal status                    | 0 before and after                           |
-
-**Full pipeline on the phone NPU (Phase 2).** TripoSG now runs end to end on the Xiaomi 15 Ultra's Hexagon NPU, from a golden's initial noise and image features to the final mesh. The [evaluation matrix](ml/triposg-mobile/eval/matrix.md) and [summary](ml/triposg-mobile/eval/summary.md) have the details.
-
-- **Export.** The 1.5B transformer is exported block by block on the laptop (23 batch-1 ONNX units under an 8 GiB memory cap). Qualcomm AI Hub compiles each unit offline for the Snapdragon 8 Elite, because compiling on the phone ran out of memory. Every layer runs on the NPU. The models total 5.6 GB.
-- **Decoding.** The VAE decoder is split in two NPU parts: a latent pass (0.3 s) and a point query (34 ms per 8,192 points). Octree extraction, marching tetrahedra and the GLB writer are portable C++. From the golden latents they reproduce the golden mesh at the noise floor (F-score 0.999, IoU 0.9985).
-- **Result.** The recommended setting is 50 steps, guidance 7.0 and extraction depth 8. It passes the mesh parity gate on all 5 goldens (Chamfer/diagonal ≤ 5.3e-3, F-score ≥ 0.93, IoU ≥ 0.956) in 4.2–7 minutes per mesh, with about 430 MB peak memory. A 25-step "fast" preset takes about 2.5 minutes. It passes on 2 of the 5 goldens; on the other 3 it gives the same object with small shape drift.
-
-**On-device inference in the app (Phase 3).** The `on-device-pipeline` test build (`com.spotnackmuse.ondevice`) turns a gallery photo into a 3D mesh entirely on the Xiaomi 15 Ultra, with no network:
-
-- **Native module.** A local Expo module (`src/spotnack-muse/client/modules/triposg`) wraps the shared C++ core in Kotlin and runs ONNX Runtime 1.29 with the QNN NPU backend. The steps are: u2net background removal, an exact port of TripoSG's preprocessing (all 59 primitives match the Python reference bit for bit), DINOv2, 50 guided transformer steps, the VAE decoder, mesh extraction, and a 100k-triangle display mesh (meshoptimizer).
-- **Speed.** A full conversion takes about 191 s: models load in ≈20 s, each guided step takes ≈3 s, and decoding plus extraction takes ≈25 s. The display mesh matches the full mesh (F-score 0.986, IoU 0.998) and passes the Khronos glTF validator with 0 errors.
-- **Lifecycle.** The conversion runs in an Android foreground service, with a progress notification and a Cancel action. The user can switch tabs or apps while it runs. Jobs are persisted, so a finished result is saved when the app comes back, and an interrupted run asks the user to retry. Cancel and failure leave no files behind.
-- **Memory.** On the phone, the NPU sessions pin about 9.8 GB of shared memory that cannot be swapped. During a run, Android closes other apps, and HyperOS may stop the app for exceeding its limit. The module now releases every NPU session as soon as a run ends, frees the transformer before decoding, drops model file pages after loading, and no longer keeps busy-waiting CPU thread pools (one run went from 317 s to 194 s). Explore shows static thumbnails during a run, and a failed 3D view falls back to a placeholder instead of crashing. The merged-session fix below solves the rest.
-
-**NPU memory fix (Phase 3).** The phone froze during a conversion, and Android closed other apps (Spotify, the screen recorder), because each of the 23 NPU sessions pinned its own scratch buffer, for 1.8 GB in total. The 23 compiled units now load as one merged model (`ml/triposg-mobile/bench/merge_chain.py`), so the NPU runtime shares a single scratch buffer. The VAE decoder is loaded only after sampling ends. Results on the Xiaomi 15 Ultra:
-
-| Metric                          | 23 sessions (before) | One merged session                         |
-| ------------------------------- | -------------------- | ------------------------------------------ |
-| Pinned NPU memory, transformer  | ≈9.0 GB              | 7.1 GB                                     |
-| Lowest free memory during a run | ≈1.1 GB              | ≈2.0 GB, ≈2.6 GB while sampling            |
-| Background apps killed per run  | ≈100–120             | 0 (Spotify and YouTube Music kept running) |
-| One transformer pass            | 2.07 s               | 1.5–1.7 s                                  |
-| Full conversion in the app      | ≈191 s               | ≈176 s                                     |
-| Output                          | baseline             | bit-identical                              |
-
-Tabs and other apps stay responsive during a run, and the conversion keeps going in the background. Two alternatives were measured and dropped:
-
-- **8-bit weights (w8a16):** they shrink the weights, but the NPU's runlist and scratch buffers grow, for a net saving of only ≈0.5 GB. They were also 15% slower and added error.
-- **FP16 weights:** the compiled models still store FP32-sized weights, so there is no saving.
-
-**Demo build.** The Android preview build is the same from phase 0, and will be updated in phase 4.
+| Pipeline stage                                    | Status                                                     |
+| ------------------------------------------------- | ---------------------------------------------------------- |
+| Feasibility audit (Phase 0)                       | Done.                                                      |
+| Golden reference set and parity harness (Phase 1) | Done: 5 images, thresholds fixed, all baselines pass.      |
+| DINOv2 image encoder on the phone                 | Done: runs and matches the GPU output.                     |
+| Rectified-flow transformer (1.5B) on the phone    | Done (Phase 2): runs on the NPU, ≈5 s per guided step.     |
+| VAE decoder and mesh extraction on the phone      | Done (Phase 2): NPU decoder + C++ extraction.              |
+| In-app on-device inference                        | Done (Phase 3): photo to mesh in the app, ≈3 min.          |
+| NPU memory footprint                              | Done (Phase 3): one merged NPU session, no app kills.      |
+| App polish, benchmarks, docs (Phase 4)            | Done: 176 s conversions, 0 app kills, parity 5/5, diagram. |
 
 </details>
 <!-- #endregion -->
@@ -218,35 +169,37 @@ Tabs and other apps stay responsive during a run, and the conversion keeps going
 <details>
   <summary><h1 id="todo">To Do</h1></summary>
 
-Remaining work on the [AI Pipeline Plan](docs/ai_pipeline_plan.md) (Phases 0–3 are done):
+- **Post-hackathon ideas:** better background removal (BiRefNet, MIT), 8-bit NPU weights if the runlist/scratch trade-off improves.
 
-- **Phase 4, integration and polish:**
-  - Host the model files for the in-app download (≈6.9 GB; the hosting choice is open).
-  - Write license documentation, including the Qualcomm AI Hub Model License terms for the bundled QNN runtime.
-  - Clean up the demo build settings.
-  - Run end-to-end tests in airplane mode.
-  - Write final benchmarks and documentation, and the `assets/ai_pipeline.png` pipeline diagram.
+- **Add color to the 3D models:** TripoSG generates shape only, so meshes are gray.
+
+- **Add support for:** iOS (QNN is Android-only) and non-Snapdragon Android phones.
+
+- **Add support for other Snapdragon chips:** the AI model is compiled for the Snapdragon 8 Elite (SM8750, Hexagon V79) only. To support another chip, the following three steps are needed:
+  1. Compile the model for the target chip by running `aihub_compile.py --device "<an AI Hub phone with your chip>"` (see [Reproduce From Scratch](docs/reproduce_from_scratch.md), step 5).
+  2. Keep the target chip's NPU library in the APK: remove its `libQnnHtpV<NN>Skel.so` / `Stub.so` lines from the exclude list in `modules/triposg/app.plugin.js`.
+  3. Allow the target chip in the app's support check (`preflight()` in `TripoSGModule.kt`, which currently accepts only `SM8750`).
 
 </details>
 <!-- #endregion -->
 
 ---
 
-<!-- #region Architecture -->
+<!-- #region Mobile App Architecture -->
 <details>
-  <summary><h1 id="architecture">Architecture</h1></summary>
+  <summary><h1 id="mobile-app-architecture">Mobile App Architecture</h1></summary>
 
 This project focuses only on the AI inference feature of the Spotnack mobile application. The project is a Yarn 4 (Berry) monorepo located at `src/spotnack-muse/`, with two workspaces:
 
 - `client/`: React Native app built with Expo.
-- `server/`: Express.js REST API written as ES modules.
+- `server/`: Express.js REST API.
 
 The root `package.json` holds the shared tooling (ESLint, Prettier, Jest, TypeScript, Babel) and the scripts that run both workspaces together, such as `yarn client`, `yarn server`, `yarn dev`, `yarn prod`, `yarn lint`, and `yarn test`. Node and Yarn versions are pinned via `engines` and `packageManager`.
 
+The Frontend and Backend architectures, including the project's file source tree, are described in more detail at [docs/architecture.md](docs/architecture.md).
+
 - The frontend follows the best practices outlined in [this open-source course](https://github.com/camponogaraviera/react-native) and uses the [MVVM architectural pattern](https://github.com/camponogaraviera/full-stack-ai-sw-roadmap/blob/main/full_stack/architectural_patterns/mvvm.md) and [Hexagonal architecture](https://github.com/camponogaraviera/full-stack-ai-sw-roadmap/blob/main/full_stack/architectural_patterns/hexagonal.md) (a.k.a. Ports and Adapters).
 - The backend is a RESTful API built with `Express.js` and AWS SDK for authentication with [Amazon Cognito](https://github.com/camponogaraviera/aws/blob/main/infrastructure/security_identity/cognito.md).
-
-The Frontend and Backend architectures, including the project's file source tree, are described in more detail at [docs/architecture.md](docs/architecture.md).
 
 </details>
 <!-- #endregion -->
@@ -257,8 +210,6 @@ The Frontend and Backend architectures, including the project's file source tree
 <details>
   <summary><h1 id="pipeline">On-Device AI Inference Pipeline</h1></summary>
 
-The on-device AI inference pipeline is described in more detail at [docs/ai_pipeline.md](docs/ai_pipeline.md).
-
 The original TripoSG AI model architecture:
 
 <p align="center">
@@ -268,8 +219,56 @@ The original TripoSG AI model architecture:
 The proposed on-device AI inference pipeline:
 
 <p align="center">
-  <img src="./assets/ai_pipeline.png" width="50%" />
+  <img src="./assets/ai_pipeline.png" width="100%" />
 </p>
+
+- Per-block ONNX Export: the PyTorch model is exported to ONNX one block at a time (23 transformer parts, 2 VAE parts), so each export fits in a laptop with 16GB RAM.
+- AI Hub Compile: Qualcomm AI Hub compiles each ONNX part, in the cloud, into a QNN context binary that runs on the Snapdragon 8 Elite's NPU.
+- Merge Chain: the 23 compiled transformer parts are joined into one model, so the NPU shares one scratch buffer and locks 7.1 GB instead of 9.0 GB.
+- Model Manifest: a list of every model file with its size and SHA-256 hash, which the app uses to check the files on the phone.
+- Model Download: the app downloads the 6.9 GB model set from Hugging Face ([spotnack/triposg-sm8750-qnn](https://huggingface.co/spotnack/triposg-sm8750-qnn)) and checks every file against the manifest. Developers can also copy it over USB (`adb`).
+
+Full details, sources, and logs can be found at [docs/ai_pipeline_logs.md](docs/ai_pipeline_logs.md). To rebuild the optimized AI model from scratch, see the [Reproduce From Scratch](#reproduce) section with a step-by-step guide including hardware requirements.
+
+</details>
+<!-- #endregion -->
+
+---
+
+<!-- #region AI Pipeline -->
+<details>
+  <summary><h1 id="benchmarks">Benchmarks</h1></summary>
+
+Final results, measured on a Xiaomi 15 Ultra with the release build of the app. Full measurements are in [docs/ai_pipeline_logs.md](docs/ai_pipeline_logs.md).
+
+| Metric                                   | Result                                                                                                                                                                                                                                                                 |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Photo to 3D model in the app             | ≈176 s, or 185 s in airplane mode (fully offline).                                                                                                                                                                                                                     |
+| Time per stage                           | In the first test-image run (177.7 s in total): preparing the image 0.2 s, encoding the photo 3.0 s, loading models onto the NPU 11.3 s, generating the shape (50 steps) 150.2 s, VAE latent pass 0.3 s, building the mesh 11.2 s, simplifying the display mesh 1.5 s. |
+| One transformer run on the NPU           | 1.5-1.7 s (each of the 50 steps runs it twice: with and without the image).                                                                                                                                                                                            |
+| NPU memory locked during a conversion    | 7.1 GB of the phone's RAM.                                                                                                                                                                                                                                             |
+| Lowest free RAM during a conversion      | ≈2.0 GB (≈2.6 GB while generating the shape).                                                                                                                                                                                                                          |
+| Other apps closed by Android             | 0 (Spotify and YouTube Music kept playing).                                                                                                                                                                                                                            |
+| Effect of merging the 23 model parts     | None on the output: the mesh is bit-for-bit identical.                                                                                                                                                                                                                 |
+| Quality vs the cloud GPU (5 test images) | All 5 pass the mesh-match thresholds, for the full and the simplified mesh.                                                                                                                                                                                            |
+| Time for the 5 test images               | 177-233 s each, run back to back. The phone slowed down as it heated up (generating the shape went from 150 s to 189 s).                                                                                                                                               |
+| High-detail option                       | 75 s longer, and saves a 200k-triangle mesh instead of 100k.                                                                                                                                                                                                           |
+| Cut-out preview (what the model sees)    | Ready in 1.0 s. It warned "cut off" on a cropped two-person selfie and gave no warning on a clean figurine photo.                                                                                                                                                      |
+| Stopping a conversion                    | Stops 1.5-2.8 s after tapping Stop and leaves no files behind.                                                                                                                                                                                                         |
+| Switching app tabs during a conversion   | Under 1 s.                                                                                                                                                                                                                                                             |
+| Scrolling Explore during a conversion    | Smooth: 0 stuttering frames, 99% of frames drawn in 7 ms or less.                                                                                                                                                                                                      |
+| Storage cleanup                          | Temporary files are deleted after each save, and old leftovers when the app starts (they had reached 278 MB).                                                                                                                                                          |
+| App size (APK)                           | 63 MB, down from 98 MB.                                                                                                                                                                                                                                                |
+
+Model size before and after the conversion. The photo is encoded by DINOv2. The phone needs only the VAE decoder, since the VAE encoder (which turns 3D meshes into latents) is used only for training.
+
+| Part                     | What it does                                                                                                       | Parameters                                | Original weights (FP32, laptop) | On the phone                                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Transformer              | Generates the 3D shape's 2048 latent tokens from noise in 50 steps, guided by the photo.                           | 1.44 billion                              | 5.4 GB                          | 5.2 GB, split into 23 parts, exported to ONNX and compiled for the NPU, FP32.                         |
+| VAE                      | Decoder: turns the latent tokens into the 3D surface. Encoder: turns 3D meshes into latent tokens (training only). | 243 million (decoder 214 M, encoder 28 M) | 0.9 GB                          | 0.4 GB, decoder only (2 parts), exported to ONNX and compiled for the NPU, weights stored at 16 bits. |
+| DINOv2 image encoder     | Vision Transformer (ViT-Large, 24 layers, by Meta) that turns the cut-out photo into 257 feature tokens.           | 304 million                               | 1.1 GB                          | 1.1 GB, exported to ONNX, not compiled (runs on the CPU), FP32.                                       |
+| u2net background remover | U-shaped network that finds the main object's pixels so the background can be removed.                             | 44 million                                | 0.16 GB                         | 0.16 GB, ready-made ONNX file from rembg, not compiled (runs on the CPU), FP32.                       |
+| **Total**                |                                                                                                                    | **≈2.0 billion**                          | **7.6 GB**                      | **6.9 GB**                                                                                            |
 
 </details>
 <!-- #endregion -->
@@ -330,6 +329,17 @@ NODE_ENV=production yarn prod
 ```bash
 yarn build:production
 ```
+
+</details>
+<!-- #endregion -->
+
+---
+
+<!-- #region Reproduce From Scratch -->
+<details>
+  <summary><h1 id="reproduce">Reproduce From Scratch</h1></summary>
+
+The step-by-step guide including hardware requirements to reproduce this project from a fresh clone to on-device AI inference on your own phone (export, compile, app build, sideload) can be found at [docs/reproduce_from_scratch.md](docs/reproduce_from_scratch.md).
 
 </details>
 <!-- #endregion -->

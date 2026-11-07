@@ -19,8 +19,8 @@ export const SearchBarComponent = () => {
       traileringIconColor={theme.text}
       traileringRippleColor="transparent"
       selectionColor={theme.text}
-      inputStyle={{ color: theme.text }}
-      style={{ backgroundColor: theme.backgroundElement }}
+      $textColor={theme.text}
+      $backgroundColor={theme.backgroundElement}
       onSubmitEditing={() => search(searchKeyword)}
       onChangeText={setSearchKeyword}
       value={searchKeyword}

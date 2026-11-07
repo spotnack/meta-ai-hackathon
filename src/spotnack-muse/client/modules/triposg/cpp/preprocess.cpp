@@ -297,6 +297,59 @@ bool HasValidAlpha(const RgbaImage& img) {
   return hist[0] >= need && hist[19] >= need;
 }
 
+MaskStats AnalyzeMask(const uint8_t* alpha, int w, int h) {
+  MaskStats st;
+  if (alpha == nullptr || w < 1 || h < 1) return st;
+  const size_t n = static_cast<size_t>(w) * h;
+  long top = 0, bottom = 0, left = 0, right = 0, area = 0;
+  for (int x = 0; x < w; ++x) {
+    if (alpha[x]) ++top;
+    if (alpha[(h - 1) * w + x]) ++bottom;
+  }
+  for (int y = 0; y < h; ++y) {
+    if (alpha[y * w]) ++left;
+    if (alpha[y * w + w - 1]) ++right;
+  }
+  for (size_t i = 0; i < n; ++i)
+    if (alpha[i]) ++area;
+  const float edges[4] = {
+      static_cast<float>(top) / w, static_cast<float>(bottom) / w,
+      static_cast<float>(left) / h, static_cast<float>(right) / h};
+  st.border_touch = *std::max_element(edges, edges + 4);
+  st.area_frac = static_cast<float>(area) / static_cast<float>(n);
+  if (area == 0) return st;
+  // 4-connected components over alpha>0 (iterative flood fill).
+  std::vector<char> seen(n, 0);
+  std::vector<int> stack;
+  const long need = static_cast<long>(area * kMinComponentFrac) + 1;
+  int big = 0;
+  for (size_t s = 0; s < n; ++s) {
+    if (!alpha[s] || seen[s]) continue;
+    long size = 0;
+    stack.clear();
+    stack.push_back(static_cast<int>(s));
+    seen[s] = 1;
+    while (!stack.empty()) {
+      const int cur = stack.back();
+      stack.pop_back();
+      ++size;
+      const int x = cur % w, y = cur / w;
+      const int nb[4][2] = {{x - 1, y}, {x + 1, y}, {x, y - 1}, {x, y + 1}};
+      for (const auto& q : nb) {
+        if (q[0] < 0 || q[0] >= w || q[1] < 0 || q[1] >= h) continue;
+        const size_t m = static_cast<size_t>(q[1]) * w + q[0];
+        if (alpha[m] && !seen[m]) {
+          seen[m] = 1;
+          stack.push_back(static_cast<int>(m));
+        }
+      }
+    }
+    if (size >= need) ++big;
+  }
+  st.big_components = big;
+  return st;
+}
+
 RgbaImage Downscale2000(const RgbaImage& rgba) {
   // load_image 2000-px block: int() sizes, cv2 INTER_AREA, all channels.
   // std::max matches the height > width / else branch (equal takes the

@@ -60,7 +60,7 @@ export const ExploreSectionListComponent = ({
 
   data = data || [];
 
-  // Ids of the cards currently competing for a live-GL lease (at most 2).
+  // Ids of the cards currently competing for a live-GL lease (at most MAX_LIVE_GL_VIEWS).
   const [visibleIds, setVisibleIds] = useState(NO_VISIBLE_IDS);
   const handleViewableItemsChanged = useCallback(({ viewableItems }) => {
     setVisibleIds((prev) => {

@@ -22,6 +22,9 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
+
+#include "preprocess.h"
 
 namespace triposg {
 
@@ -56,6 +59,17 @@ class Engine {
                const ConvertOptions& opts, const std::string& out_dir,
                const ProgressCallback& progress, std::atomic<bool>& cancel,
                std::string& error);
+
+  // Cut-out preview: the exact RGB canvas Convert feeds DINOv2
+  // (background removal with the same HasValidAlpha rule + PrepareImage
+  // on white), with mask stats for the input warnings. Creates the u2net
+  // CPU session for the call and releases it before returning; never
+  // touches the transformer/VAE or any NPU session. Requires Configure
+  // first (for the model dir). Not bit-shared with a later Convert: the
+  // conversion recomputes it (cheap next to 176 s).
+  bool PreviewCutout(const uint8_t* rgba, int w, int h,
+                     std::vector<uint8_t>& out_rgb, int& out_w, int& out_h,
+                     MaskStats& stats, std::string& error);
 
   // Drops resident transformer + VAE sessions.
   void Release();

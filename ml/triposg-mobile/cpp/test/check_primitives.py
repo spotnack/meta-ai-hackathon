@@ -202,6 +202,87 @@ def main() -> None:
         if not all_ok:
             raise SystemExit(1)
 
+    # Mask quality stats (AnalyzeMask): synthetic alpha fixtures. Floats
+    # compare within 1e-6 (C++ float32 division vs numpy float64),
+    # component counts exactly.
+    def mask_stats(mask):
+        top = mask[0, :] > 0
+        bottom = mask[-1, :] > 0
+        left = mask[:, 0] > 0
+        right = mask[:, -1] > 0
+        border = max(top.mean(), bottom.mean(), left.mean(), right.mean())
+        area = (mask > 0).mean()
+        # 4-connected components, pure Python (no scipy dependency).
+        h, w = mask.shape
+        seen = np.zeros_like(mask, dtype=bool)
+        big = 0
+        if area > 0:
+            need = int(area * h * w * 0.05) + 1
+            for y in range(h):
+                for x in range(w):
+                    if mask[y, x] == 0 or seen[y, x]:
+                        continue
+                    size = 0
+                    stack = [(x, y)]
+                    seen[y, x] = True
+                    while stack:
+                        cx, cy = stack.pop()
+                        size += 1
+                        for nx, ny in (
+                            (cx - 1, cy),
+                            (cx + 1, cy),
+                            (cx, cy - 1),
+                            (cx, cy + 1),
+                        ):
+                            if (
+                                0 <= nx < w
+                                and 0 <= ny < h
+                                and mask[ny, nx] > 0
+                                and not seen[ny, nx]
+                            ):
+                                seen[ny, nx] = True
+                                stack.append((nx, ny))
+                    if size >= need:
+                        big += 1
+        return border, area, big
+
+    clean = np.zeros((100, 100), dtype=np.uint8)
+    clean[30:70, 30:70] = 200
+    cropped = np.zeros((100, 100), dtype=np.uint8)
+    cropped[20:80, 0:60] = 200  # touches the left edge along 60 rows
+    two = np.zeros((100, 100), dtype=np.uint8)
+    two[10:30, 10:30] = 200
+    two[60:80, 60:80] = 200
+    speckled = np.zeros((100, 100), dtype=np.uint8)
+    speckled[30:70, 30:70] = 200
+    speckled[5:7, 5:7] = 200  # 4 px speck: 0.25% of the mask, not big
+    speckled[90:92, 80:82] = 200
+    empty = np.zeros((100, 100), dtype=np.uint8)
+    for mname, mask in [
+        ("clean", clean),
+        ("cropped", cropped),
+        ("two", two),
+        ("speckled", speckled),
+        ("empty", empty),
+    ]:
+        np.save(workdir / "mask.npy", mask)
+        probed = run_probe(probe, "maskstats", workdir / "mask.npy").split()
+        border, area, big = float(probed[0]), float(probed[1]), int(probed[2])
+        want_border, want_area, want_big = mask_stats(mask)
+        ok = (
+            abs(border - want_border) < 1e-6
+            and abs(area - want_area) < 1e-6
+            and big == want_big
+        )
+        print(
+            f"maskstats/{mname}: probe=({border:.4f},{area:.4f},{big}) "
+            f"ref=({want_border:.4f},{want_area:.4f},{want_big}) "
+            f"{'EXACT' if ok else 'FAIL'}"
+        )
+        all_ok &= ok
+        if not all_ok:
+            raise SystemExit(1)
+
     print("PRIMITIVES " + ("ALL EXACT" if all_ok else "FAIL"))
     sys.exit(0 if all_ok else 1)
 

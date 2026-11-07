@@ -10,8 +10,12 @@
 #include <android/log.h>
 
 #include <atomic>
+#include <chrono>
 #include <cstdint>
+#include <cstring>
+#include <map>
 #include <string>
+#include <vector>
 
 #include "models.h"
 #include "pipeline.h"
@@ -119,15 +123,61 @@ Java_expo_modules_triposg_TripoSGModule_nativeCancel(JNIEnv*, jobject) {
   g_cancel.store(true);
 }
 
+// Cut-out preview: same bg removal + PrepareImage as Convert, no NPU.
+// Returns a byte[] of header + RGB pixels, or null on failure (the
+// caller treats null as "no preview", never fatal).
+// Header (little-endian): "CUT1" u8[4], w i32, h i32, borderTouch f32,
+// bigComponents i32, maskAreaFrac f32; then w*h*3 RGB bytes.
+JNIEXPORT jbyteArray JNICALL
+Java_expo_modules_triposg_TripoSGModule_nativePreviewCutout(
+    JNIEnv* env, jobject, jbyteArray rgba, jint w, jint h) {
+  jbyte* bytes = env->GetByteArrayElements(rgba, nullptr);
+  if (!bytes) return nullptr;
+  std::vector<uint8_t> rgb;
+  int out_w = 0, out_h = 0;
+  triposg::MaskStats stats;
+  std::string error;
+  bool ok = g_engine.PreviewCutout(reinterpret_cast<uint8_t*>(bytes), w, h,
+                                   rgb, out_w, out_h, stats, error);
+  env->ReleaseByteArrayElements(rgba, bytes, JNI_ABORT);
+  if (!ok) return nullptr;
+  const size_t npix = static_cast<size_t>(out_w) * out_h;
+  if (rgb.size() != npix * 3) return nullptr;
+  std::vector<uint8_t> buf;
+  buf.reserve(24 + rgb.size());
+  buf.insert(buf.end(), {'C', 'U', 'T', '1'});
+  auto put32 = [&](uint32_t v) {
+    buf.push_back(v & 0xFF);
+    buf.push_back((v >> 8) & 0xFF);
+    buf.push_back((v >> 16) & 0xFF);
+    buf.push_back((v >> 24) & 0xFF);
+  };
+  put32(static_cast<uint32_t>(out_w));
+  put32(static_cast<uint32_t>(out_h));
+  uint32_t border_bits, area_bits;
+  std::memcpy(&border_bits, &stats.border_touch, 4);
+  std::memcpy(&area_bits, &stats.area_frac, 4);
+  put32(border_bits);
+  put32(static_cast<uint32_t>(stats.big_components));
+  put32(area_bits);
+  buf.insert(buf.end(), rgb.begin(), rgb.end());
+  jbyteArray out = env->NewByteArray(static_cast<jsize>(buf.size()));
+  if (!out) return nullptr;
+  env->SetByteArrayRegion(out, 0, static_cast<jsize>(buf.size()),
+                          reinterpret_cast<jbyte*>(buf.data()));
+  return out;
+}
+
 // Debug-only adb trigger (see TripoSGDebugReceiver.kt): a fixed-knob
-// conversion (50 steps, guidance 7.0, seed 42, d0 6 / d1 8, 100k display
+// conversion (50 steps, guidance 7.0, seed 42 unless noisePath names a
+// (1,2048,64) float32 .npy initial latent, d0 6 / d1 8, 100k display
 // tris) with logcat progress. The receiver refuses to run in
 // non-debuggable builds, so this is dead code in release. Null on
 // success, else the error.
 JNIEXPORT jstring JNICALL
 Java_expo_modules_triposg_TripoSGDebug_nativeDebugConvert(
     JNIEnv* env, jobject, jstring modelDir, jstring backendPath,
-    jbyteArray rgba, jint w, jint h, jstring outDir) {
+    jbyteArray rgba, jint w, jint h, jstring outDir, jstring noisePath) {
   std::string error;
   if (!g_engine.Configure(JStringToStd(env, modelDir),
                           JStringToStd(env, backendPath), error))
@@ -142,14 +192,55 @@ Java_expo_modules_triposg_TripoSGDebug_nativeDebugConvert(
   opts.d1 = 8;
   opts.seed = 42;
   opts.target_tris = 100000;
-  auto progress = [](double f, const std::string& label) {
+  opts.noise_path = JStringToStd(env, noisePath);
+  // Per-stage wall clock from the engine's progress labels (first-seen
+  // timestamps; "Generating geometry" repeats per sampling step, so the
+  // sampling span starts at its second occurrence). Unreached stages log
+  // -1. Label order in pipeline.cpp: Isolating subject -> Preparing
+  // image -> Encoding image -> Generating geometry -> Loading models ->
+  // (Generating geometry x steps) -> Decoding shape -> Extracting mesh ->
+  // Building mesh -> Writing model -> Done.
+  auto t0 = std::chrono::steady_clock::now();
+  auto elapsed = [&]() {
+    return std::chrono::duration<double>(
+               std::chrono::steady_clock::now() - t0)
+        .count();
+  };
+  std::map<std::string, double> first_seen;
+  int generating_count = 0;
+  double sampling_start = -1.0;
+  auto progress = [&](double f, const std::string& label) {
     __android_log_print(ANDROID_LOG_INFO, "TripoSGDebug",
                         "progress %.1f%% %s", f * 100.0, label.c_str());
+    if (!first_seen.count(label)) first_seen[label] = elapsed();
+    if (label == "Generating geometry" && ++generating_count == 2)
+      sampling_start = elapsed();
   };
   bool ok = g_engine.Convert(reinterpret_cast<uint8_t*>(bytes), w, h, opts,
                              JStringToStd(env, outDir), progress, g_cancel,
                              error);
   env->ReleaseByteArrayElements(rgba, bytes, JNI_ABORT);
+  auto at = [&](const char* label) {
+    auto it = first_seen.find(label);
+    return it == first_seen.end() ? -1.0 : it->second;
+  };
+  auto span = [](double a, double b) {
+    return (a < 0 || b < 0) ? -1.0 : b - a;
+  };
+  double t_end = elapsed();
+  __android_log_print(
+      ANDROID_LOG_INFO, "TripoSGDebug",
+      "TIMINGS preprocess=%.1f dinov2=%.1f session_create=%.1f "
+      "sampling=%.1f vae=%.1f extraction=%.1f display=%.1f total=%.1f",
+      span(at("Isolating subject"), at("Encoding image")),
+      span(at("Encoding image"), at("Generating geometry")),
+      span(at("Loading models"), sampling_start),
+      span(sampling_start, at("Decoding shape")),
+      span(at("Decoding shape"), at("Extracting mesh")),
+      span(at("Extracting mesh"), at("Building mesh")),
+      span(at("Building mesh"),
+           at("Done") >= 0 ? at("Done") : t_end),
+      t_end);
   if (ok) return nullptr;
   return StdToJString(env, error.empty() ? "convert failed" : error);
 }

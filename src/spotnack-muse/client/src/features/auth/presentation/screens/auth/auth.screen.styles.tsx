@@ -1,5 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import styled from "styled-components/native";
 
 import { ThemedText } from "@/shared/theme/themed-text";
@@ -85,4 +86,8 @@ export const SignUpButtonText = styled(ThemedText)`
   color: #ffffff;
   font-size: 16px;
   font-weight: 600;
+`;
+
+export const SafeArea = styled(SafeAreaView)`
+  flex: 1;
 `;

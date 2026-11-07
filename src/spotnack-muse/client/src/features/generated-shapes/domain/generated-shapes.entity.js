@@ -18,6 +18,7 @@
  * @property {string} [createdAt] - ISO-8601 creation timestamp.
  * @property {GeneratedShapeModel|null} [model] - The 3D model file, or null when it is missing.
  * @property {string|null} [generator] - Identifier of the pipeline that produced the model.
+ * @property {{uri: string|null, saveUri: string}} [preview] - Still image of the model (uri, null until saved) and where to save it.
  */
 
 /**

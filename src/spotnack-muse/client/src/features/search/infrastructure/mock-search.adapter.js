@@ -45,11 +45,14 @@ export const searchRequest = async (keyword: string): Promise<Object> => {
 
     const filteredCategoryArray = categoryArray.filter(isValidCategoryItem);
 
+    // An empty (or fully invalid) category is left out; the others still
+    // show. It used to end the whole search, so emptying one category
+    // (e.g. Beverages) hid every section.
     if (!filteredCategoryArray.length) {
       console.log(
-        "*** Filtered category array is empty. Exiting searchRequest..."
+        `*** Category "${categoryKey}" has no valid items. Skipping it...`
       );
-      return null;
+      continue;
     }
 
     let filteredSearchArray =

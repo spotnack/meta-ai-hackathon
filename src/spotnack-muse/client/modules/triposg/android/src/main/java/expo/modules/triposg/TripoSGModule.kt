@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Process
@@ -16,11 +17,13 @@ import android.media.ExifInterface
 import android.net.Uri
 import android.os.Build
 import android.system.Os
+import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import org.json.JSONObject
 import java.io.File
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
@@ -78,12 +81,23 @@ internal fun decodeImageToRgba(ctx: Context, uri: String): Triple<ByteArray, Int
 // so the JS adapter can stay a thin port implementation (part B).
 class TripoSGModule : Module() {
   companion object {
+    // Support threshold for total RAM (see preflight).
+    private const val MIN_TOTAL_RAM_BYTES = 13L shl 30
+
     init {
       System.loadLibrary("triposg_jni")
     }
   }
 
   private val executor = Executors.newSingleThreadExecutor()
+  // Model download and full verification run here, not on Expo's shared
+  // AsyncFunction thread: a blocking body there (minutes to hours) queues
+  // every other call behind it, so pauseDownload / getStatus never ran
+  // until the whole download had finished.
+  // 8 MB stack: native code runs here too (SHA-256 of every model file).
+  private val modelIoExecutor = Executors.newSingleThreadExecutor { task ->
+    Thread(null, task, "TripoSGModelIO", 8L shl 20)
+  }
   private data class Job(val id: String, var done: Boolean = false, var stopRequested: Boolean = false)
   private val jobs = ConcurrentHashMap<String, Job>()
   // The C++ engine is single-flight: convert and full-verify both take
@@ -99,6 +113,9 @@ class TripoSGModule : Module() {
   ): String?
   private external fun nativeCancel()
   private external fun nativeRelease()
+  // Null on failure (the caller treats it as "no preview", never fatal).
+  // Byte layout documented in jni_bridge.cpp ("CUT1" header + RGB).
+  private external fun nativePreviewCutout(rgba: ByteArray, w: Int, h: Int): ByteArray?
   private external fun nativeVerifySizes(modelDir: String): String
   private external fun nativeVerifyFull(modelDir: String, progressCb: ProgressCallback): String?
 
@@ -249,6 +266,24 @@ class TripoSGModule : Module() {
     }
   }
 
+  private fun startDownloadService() {
+    val ctx = appContext.reactContext ?: return
+    val intent = Intent(ctx, TripoSGService::class.java)
+      .setAction(TripoSGService.ACTION_DOWNLOAD)
+    if (Build.VERSION.SDK_INT >= 26) {
+      ctx.startForegroundService(intent)
+    } else {
+      ctx.startService(intent)
+    }
+  }
+
+  // Notification Pause (TripoSGService) and JS pauseDownload.
+  internal fun pauseModelDownload(): Boolean {
+    val job = jobs["download"] ?: return false
+    job.stopRequested = true
+    return true
+  }
+
   private fun stopConverterService() {
     try {
       val ctx = appContext.reactContext ?: return
@@ -257,6 +292,9 @@ class TripoSGModule : Module() {
       // The service self-stops off the terminal job record as backup.
     }
   }
+
+  private fun gbText(bytes: Long): String =
+    String.format(java.util.Locale.US, "%.1f GB", bytes / 1_073_741_824.0)
 
   @Suppress("unchecked_cast")
   private fun specsFrom(options: Map<String, Any?>): List<ModelSpec> {
@@ -295,6 +333,20 @@ class TripoSGModule : Module() {
     if (soc.isNotEmpty() && !soc.contains("SM8750", ignoreCase = true)) {
       return Pair(false, "needs Snapdragon 8 Elite (SM8750); this device reports $soc")
     }
+    // A conversion locks ~7.1 GB of RAM for the NPU, so only 16 GB phones
+    // are supported. They report ~15 GB to apps and 12 GB phones ~11 GB:
+    // 13 GiB splits the two, so a 12 GB phone is never offered the 6.9 GB
+    // model download.
+    val totalMem = appContext.reactContext?.let { ctx ->
+      val info = android.app.ActivityManager.MemoryInfo()
+      (ctx.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager)
+        ?.getMemoryInfo(info)
+      info.totalMem
+    } ?: 0L
+    if (totalMem in 1 until MIN_TOTAL_RAM_BYTES) {
+      val gb = String.format(java.util.Locale.US, "%.1f", totalMem / 1e9)
+      return Pair(false, "needs 16 GB of RAM (this phone reports $gb GB)")
+    }
     val htp = File(nativeLibraryDir(), "libQnnHtp.so")
     if (!htp.exists()) {
       return Pair(false, "QNN HTP runtime missing (libQnnHtp.so not packaged)")
@@ -313,6 +365,50 @@ class TripoSGModule : Module() {
   private fun decodeToRgba(uri: String): Triple<ByteArray, Int, Int> {
     val ctx = appContext.reactContext ?: throw IllegalStateException("no react context")
     return decodeImageToRgba(ctx, uri)
+  }
+
+  // Parses a nativePreviewCutout blob ("CUT1" header + RGB, little-endian;
+  // see jni_bridge.cpp), writes the canvas as a PNG into the cache, and
+  // returns the preview map for JS. Old previews are deleted first so the
+  // cache never accumulates them.
+  private fun parseCutoutBlob(blob: ByteArray): Map<String, Any?> {
+    if (blob.size < 24 || blob[0] != 'C'.code.toByte() || blob[1] != 'U'.code.toByte() ||
+        blob[2] != 'T'.code.toByte() || blob[3] != '1'.code.toByte()) {
+      throw IllegalStateException("cut-out failed")
+    }
+    val head = ByteBuffer.wrap(blob, 0, 24).order(ByteOrder.LITTLE_ENDIAN)
+    head.position(4)
+    val w = head.int
+    val h = head.int
+    val borderTouch = head.float.toDouble()
+    val bigComponents = head.int
+    val maskAreaFrac = head.float.toDouble()
+    if (w < 1 || h < 1 || blob.size != 24 + w * h * 3) {
+      throw IllegalStateException("cut-out failed")
+    }
+    val pixels = IntArray(w * h)
+    var p = 24
+    for (i in pixels.indices) {
+      val r = blob[p++].toInt() and 0xFF
+      val g = blob[p++].toInt() and 0xFF
+      val b = blob[p++].toInt() and 0xFF
+      pixels[i] = -0x1000000 or (r shl 16) or (g shl 8) or b
+    }
+    val bitmap = Bitmap.createBitmap(pixels, w, h, Bitmap.Config.ARGB_8888)
+    val ctx = appContext.reactContext ?: throw IllegalStateException("no react context")
+    val dir = File(ctx.cacheDir, "triposg/previews").apply { mkdirs() }
+    dir.listFiles { f -> f.name.startsWith("preview_") }?.forEach { it.delete() }
+    val file = File(dir, "preview_${UUID.randomUUID()}.png")
+    file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    bitmap.recycle()
+    return mapOf(
+      "uri" to Uri.fromFile(file).toString(),
+      "width" to w,
+      "height" to h,
+      "borderTouch" to borderTouch,
+      "bigComponents" to bigComponents,
+      "maskAreaFrac" to maskAreaFrac,
+    )
   }
 
   // Entry point for the notification Cancel action (via
@@ -356,7 +452,7 @@ class TripoSGModule : Module() {
       )
     }
 
-    AsyncFunction("verifyModels") { options: Map<String, Any?> ->
+    AsyncFunction("verifyModels") { options: Map<String, Any?>, promise: Promise ->
       val full = options["full"] as? Boolean ?: false
       val (supported, reason) = preflight()
       if (!supported) throw IllegalStateException("unsupported: $reason")
@@ -367,21 +463,27 @@ class TripoSGModule : Module() {
       ensureAdspPath()
       if (!full) {
         val problem = nativeVerifySizes(dir.absolutePath)
-        return@AsyncFunction mapOf("ok" to problem.isEmpty(), "problem" to (problem.ifEmpty { null }))
+        promise.resolve(mapOf("ok" to problem.isEmpty(), "problem" to (problem.ifEmpty { null })))
+        return@AsyncFunction
       }
       if (!engineBusy.compareAndSet(false, true)) {
         throw IllegalStateException("a conversion is running")
       }
       val jobId = "verify"
-      currentJob.set(jobId)
-      try {
-        val error = nativeVerifyFull(dir.absolutePath, ProgressCallback())
-        if (error == null) return@AsyncFunction mapOf("ok" to true, "problem" to null)
-        if (error == "cancelled") return@AsyncFunction mapOf("ok" to false, "problem" to "cancelled")
-        return@AsyncFunction mapOf("ok" to false, "problem" to error)
-      } finally {
-        currentJob.remove()
-        engineBusy.set(false)
+      modelIoExecutor.execute {
+        currentJob.set(jobId)
+        try {
+          val error = nativeVerifyFull(dir.absolutePath, ProgressCallback())
+          promise.resolve(when (error) {
+            null -> mapOf("ok" to true, "problem" to null)
+            else -> mapOf("ok" to false, "problem" to error)
+          })
+        } catch (t: Throwable) {
+          promise.reject("ERR_VERIFY", t.message ?: "verification failed", t)
+        } finally {
+          currentJob.remove()
+          engineBusy.set(false)
+        }
       }
     }
 
@@ -546,6 +648,42 @@ class TripoSGModule : Module() {
       return@AsyncFunction jobId
     }
 
+    // Cut-out preview for the picker: the exact RGB canvas a conversion
+    // would feed DINOv2, plus mask stats for the input warnings. CPU-only
+    // (u2net session created and released inside the call; the
+    // transformer/VAE are never touched). Takes engineBusy because
+    // nativeConfigure releases engine sessions — a "busy" error means a
+    // conversion or verify is running, and the caller skips the preview.
+    AsyncFunction("previewCutout") { options: Map<String, Any?> ->
+      val (supported, reason) = preflight()
+      if (!supported) throw IllegalStateException("unsupported: $reason")
+      val imageUri = options["imageUri"] as? String
+        ?: throw IllegalArgumentException("previewCutout needs imageUri")
+      val root = modelRoot()
+      val dir = root.listFiles()?.sortedByDescending { it.name }
+        ?.firstOrNull { File(it, "models_manifest.json").exists() }
+        ?: throw IllegalStateException("no models downloaded")
+      if (!File(dir, "u2net.onnx").exists())
+        throw IllegalStateException("models incomplete: u2net.onnx")
+      if (!engineBusy.compareAndSet(false, true)) {
+        throw IllegalStateException("a conversion is running")
+      }
+      try {
+        val configError = nativeConfigure(
+          dir.absolutePath, File(nativeLibraryDir(), "libQnnHtp.so").absolutePath)
+        if (configError != null) throw IllegalStateException(configError)
+        val (bytes, w, h) = decodeToRgba(imageUri)
+        val t0 = SystemClock.elapsedRealtime()
+        val blob = nativePreviewCutout(bytes, w, h)
+          ?: throw IllegalStateException("cut-out failed")
+        val ms = SystemClock.elapsedRealtime() - t0
+        android.util.Log.i("TripoSG", "previewCutout ${w}x$h in ${ms}ms")
+        parseCutoutBlob(blob)
+      } finally {
+        engineBusy.set(false)
+      }
+    }
+
     AsyncFunction("cancel") { jobId: String ->
       // The download worker polls its own flag; never touch the C++
       // engine here (a conversion may be using it).
@@ -590,6 +728,11 @@ class TripoSGModule : Module() {
       return@AsyncFunction jobToMap(record)
     }
 
+    // A saved result no longer needs its job folder: the library owns a
+    // copy of the display mesh, and the full mesh is only validity-checked
+    // (never kept), so the folder is deleted for done records too. This
+    // covers both the in-session save and the relaunch-resume save (the
+    // hook clears the record after saving).
     AsyncFunction("clearJob") { jobId: String ->
       val ctx = appContext.reactContext ?: return@AsyncFunction false
       val appFilesDir = ctx.filesDir
@@ -599,7 +742,7 @@ class TripoSGModule : Module() {
         return@AsyncFunction false
       }
       try {
-        if (record.status != TripoSGJobs.STATUS_DONE) {
+        if (record.outDir.isNotEmpty()) {
           File(record.outDir).deleteRecursively()
         }
       } catch (e: Exception) {
@@ -607,6 +750,60 @@ class TripoSGModule : Module() {
       }
       TripoSGJobs.clear(appFilesDir)
       return@AsyncFunction true
+    }
+
+    // Storage state for the JS startup sweep (planStorageSweep): job
+    // folders under files/triposg/jobs, the persisted record (if any),
+    // whether a worker owns the engine now, cache/triposg subdirs, and
+    // whether the build is debuggable (which keeps cache/triposg/debug).
+    // No deletion here; call deleteSweepPaths with the plan.
+    AsyncFunction("getStorageState") {
+      val ctx = appContext.reactContext ?: return@AsyncFunction mapOf<String, Any?>()
+      val appFilesDir = ctx.filesDir
+      val record = TripoSGJobs.read(appFilesDir)
+      val jobDirs = TripoSGJobs.jobsDir(appFilesDir).listFiles()
+        ?.filter { it.isDirectory }?.map { it.name } ?: emptyList()
+      val cacheDirs = File(ctx.cacheDir, "triposg").listFiles()
+        ?.filter { it.isDirectory }?.map { it.name } ?: emptyList()
+      val debuggable =
+        (ctx.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+      mapOf(
+        "jobDirs" to jobDirs,
+        "record" to (record?.let { jobToMap(it) }),
+        "workerAlive" to TripoSGJobs.workerAlive,
+        "cacheDirs" to cacheDirs,
+        "debuggable" to debuggable
+      )
+    }
+
+    // Deletes exactly the swept paths the JS plan named (child names
+    // only: anything empty, "."/"..", or containing a separator is
+    // refused). Returns the number of deleted top-level dirs.
+    AsyncFunction("deleteSweepPaths") { options: Map<String, Any?> ->
+      val ctx = appContext.reactContext ?: return@AsyncFunction mapOf("deleted" to 0)
+      fun clean(parent: File, names: List<String>): Int {
+        var n = 0
+        for (name in names) {
+          if (name.isEmpty() || name == "." || name == ".." ||
+            name.contains("/") || name.contains("\\")
+          ) {
+            continue
+          }
+          try {
+            if (File(parent, name).deleteRecursively()) n += 1
+          } catch (e: Exception) {
+            // Best effort per dir.
+          }
+        }
+        return n
+      }
+      val jobNames =
+        (options["jobDirs"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+      val cacheNames =
+        (options["cacheDirs"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+      val deleted = clean(TripoSGJobs.jobsDir(ctx.filesDir), jobNames) +
+        clean(File(ctx.cacheDir, "triposg"), cacheNames)
+      mapOf("deleted" to deleted)
     }
 
     AsyncFunction("release") {
@@ -641,7 +838,7 @@ class TripoSGModule : Module() {
     // "paused" (pauseDownload, cancel("download"), or a restart in
     // between — re-call to resume) / "failed". Progress arrives as
     // onDownloadProgress events, throttled to ~2 Hz.
-    AsyncFunction("startDownload") { options: Map<String, Any?> ->
+    AsyncFunction("startDownload") { options: Map<String, Any?>, promise: Promise ->
       val (supported, reason) = preflight()
       if (!supported) throw IllegalStateException("unsupported: $reason")
       val baseUrl = options["baseUrl"] as? String
@@ -651,56 +848,75 @@ class TripoSGModule : Module() {
       val files = specsFrom(options)
       ensureTrimWatcher()
       val jobId = "download"
+      // Registered here, on the calling thread, so pauseDownload finds the
+      // job as soon as this call returns.
       if (jobs.putIfAbsent(jobId, Job(jobId)) != null) {
         throw IllegalStateException("a download is already running")
       }
-      currentJob.set(jobId)
-      var lastEmitMs = 0L
+      val root = modelRoot()
+      // Foreground service + Wi-Fi lock for the whole download: without
+      // them HyperOS aborts the socket as soon as the app is backgrounded.
+      TripoSGActiveModule.module = this@TripoSGModule
+      TripoSGJobs.downloadSnapshot = null
+      ensureNotificationPermission()
       try {
-        val worker = ModelDownloader(modelRoot(), baseUrl, version, files)
-        val at = worker.diskProgress()
-        val target = File(modelRoot(), version).apply { mkdirs() }
-        val remaining = at.totalBytes - at.downloadedBytes
-        if (target.usableSpace < remaining) {
-          return@AsyncFunction mapOf(
-            "status" to "failed",
-            "problem" to "not enough free space: need $remaining bytes")
-        }
-        val error = worker.run(
-          stop = { jobs[jobId]?.stopRequested == true },
-          onProgress = { progress ->
-            val now = System.currentTimeMillis()
-            if (now - lastEmitMs > 500 ||
-              progress.downloadedBytes >= progress.totalBytes
-            ) {
-              lastEmitMs = now
-              sendEvent("onDownloadProgress", mapOf(
-                "downloadedBytes" to progress.downloadedBytes,
-                "totalBytes" to progress.totalBytes,
-                "file" to progress.file,
-                "fileIndex" to progress.fileIndex,
-                "fileCount" to progress.fileCount
-              ))
-            }
+        startDownloadService()
+      } catch (e: Exception) {
+        Log.w("TripoSG", "download service start failed: ${e.message}")
+      }
+      modelIoExecutor.execute {
+        currentJob.set(jobId)
+        var lastEmitMs = 0L
+        try {
+          val worker = ModelDownloader(root, baseUrl, version, files)
+          val at = worker.diskProgress()
+          val target = File(root, version).apply { mkdirs() }
+          val remaining = at.totalBytes - at.downloadedBytes
+          if (target.usableSpace < remaining) {
+            promise.resolve(mapOf(
+              "status" to "failed",
+              "problem" to "not enough free space: need $remaining bytes"))
+            return@execute
+          }
+          val error = worker.run(
+            stop = { jobs[jobId]?.stopRequested == true },
+            onProgress = { progress ->
+              val now = System.currentTimeMillis()
+              if (now - lastEmitMs > 500 ||
+                progress.downloadedBytes >= progress.totalBytes
+              ) {
+                lastEmitMs = now
+                TripoSGJobs.downloadSnapshot = Pair(
+                  progress.downloadedBytes.toDouble() / maxOf(progress.totalBytes, 1L),
+                  "${gbText(progress.downloadedBytes)} of ${gbText(progress.totalBytes)}"
+                )
+                sendEvent("onDownloadProgress", mapOf(
+                  "downloadedBytes" to progress.downloadedBytes,
+                  "totalBytes" to progress.totalBytes,
+                  "file" to progress.file,
+                  "fileIndex" to progress.fileIndex,
+                  "fileCount" to progress.fileCount
+                ))
+              }
+            })
+          promise.resolve(when {
+            error == null -> mapOf("status" to "completed", "problem" to null)
+            error == "paused" -> mapOf("status" to "paused", "problem" to null)
+            else -> mapOf("status" to "failed", "problem" to error)
           })
-        return@AsyncFunction when {
-          error == null -> mapOf("status" to "completed", "problem" to null)
-          error == "paused" -> mapOf("status" to "paused", "problem" to null)
-          else -> mapOf("status" to "failed", "problem" to error)
+        } catch (t: Throwable) {
+          promise.resolve(mapOf("status" to "failed", "problem" to (t.message ?: "download failed")))
+        } finally {
+          jobs.remove(jobId)
+          currentJob.remove()
+          TripoSGJobs.downloadSnapshot = null
+          stopConverterService()
         }
-      } finally {
-        jobs.remove(jobId)
-        currentJob.remove()
       }
     }
 
     AsyncFunction("pauseDownload") {
-      val job = jobs["download"]
-      if (job != null) {
-        job.stopRequested = true
-        return@AsyncFunction true
-      }
-      return@AsyncFunction false
+      return@AsyncFunction pauseModelDownload()
     }
 
     // Deletes the installed (or partially downloaded) model dir.

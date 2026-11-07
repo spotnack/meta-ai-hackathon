@@ -6,13 +6,28 @@ runs the full pipeline on the SM8750 NPU; iOS reports `unsupported`.
 - `index.js` — JS API (`getStatus`, `verifyModels({full})`,
   `convert({...}) → jobId`, `cancel`, `release`, `onProgress/onDone/onError`,
   plus `downloadPreflight`, `getDownloadProgress`, `startDownload`,
-  `pauseDownload`, `deleteModels`, `onDownloadProgress`).
+  `pauseDownload`, `deleteModels`, `onDownloadProgress`, and the storage
+  sweep pair `getStorageState` / `deleteSweepPaths`, planned by
+  `src/features/image-to-3d/infrastructure/storage-sweep.js`).
+- `previewCutout({imageUri})` — cut-out preview for the picker: runs the
+  same u2net bg removal (skipped when the input already has alpha, same
+  rule as Convert) + `PrepareImage` on CPU, returns the preview PNG uri
+  with mask stats (`borderTouch`, `bigComponents`, `maskAreaFrac`).
+  Creates and releases the u2net session inside the call; never touches
+  the transformer/VAE or any NPU session. Resolves null when unavailable
+  (no models, busy engine) — never fatal.
 - `android/` — Kotlin module + JNI + CMake. Needs the Gradle deps from
   Maven Central and the vendored meshoptimizer (see below).
   `TripoSGDownload.kt` is the resumable model downloader;
   `TripoSGDebugReceiver.kt` is the debuggable-only adb trigger (see below).
 - `app.plugin.js` — config plugin (listed in `app.json`): drops the unused
-  QNN backends from the APK (keeps HTP V79 + system libs; ~94 MB saved).
+  QNN backends from the APK (keeps HTP V79 + system libs;
+  `libQnnHtpPrepare.so` excluded too — all units are precompiled
+  EPContext binaries; measured release APK 98 MB → 63 MB). With
+  `TRIPOSG_DEBUGGABLE=1` in the prebuild environment it additionally
+  marks the release build debuggable (for `run-as` inspection and
+  golden-noise parity runs); default builds are untouched, and a build
+  made with it must never ship.
 - `cpp/` — engine (`pipeline`, `preprocess`, `decimate`, `models`) plus
   the shared `ml/triposg-mobile/cpp` core via `add_subdirectory`.
 - `ios/` — stub.
@@ -44,6 +59,15 @@ only on the user's Cancel, on error, or if the OS kills the service —
 backgrounding the app never stops it. `POST_NOTIFICATIONS` is requested
 once before the first conversion; denied only hides the notification.
 
+The model download uses the same service: notification "Downloading
+TripoSG QNN model" with a Pause action, a partial wake lock and a Wi-Fi
+lock. Without it HyperOS cuts a backgrounded app's sockets ("Software
+caused connection abort"). A dropped connection is retried with backoff
+(2 s up to 60 s, reset by any new bytes) and resumes the `.part` file
+with HTTP Range. The download and full Verify run on their own thread,
+not on Expo's shared AsyncFunction thread, so Pause and status calls
+answer while they run.
+
 Notification cost matters: all notification work runs on a dedicated
 `HandlerThread` (never the main thread — a 1 Hz notify there measured
 ~2.5 s per message on HyperOS and dragged a 5.3 min run to 11 min), one
@@ -63,8 +87,21 @@ line per terminal outcome. The hook reads it on mount
 (`getPendingJob`): a live job reattaches to its events, a done job
 completes its save, failed/interrupted report, cancelled clears
 silently. The record is cleared after every in-session terminal
-outcome (`clearJob`); outputs live in filesDir (not cache) so they
-survive backgrounding.
+outcome (`clearJob`), and clearing deletes the job's folder too: the
+library owns a copy of the display mesh, and the full mesh is only
+validity-checked, never kept. Outputs live in filesDir (not cache) so
+they survive backgrounding.
+
+Storage cleanup: besides `clearJob`, app start runs a sweep
+(`sweepStaleStorage`, called once from the root layout): native
+`getStorageState` lists leftover job folders, the persisted record,
+worker liveness, and cache subdirs; the tested pure function
+`planStorageSweep` keeps a done record's folder (its save may still
+complete) and a live worker's folder, plus `cache/triposg/debug` in
+debuggable builds; native `deleteSweepPaths` deletes exactly the
+planned child names (anything else is refused). Orphaned folders from
+kills and older builds are the common case — 174 MB of job folders +
+104 MB of stale cache were measured before this existed.
 
 Only validated saves: the engine writes `mesh.glb` /
 `mesh.display.glb` to `.tmp` names and renames on success only
@@ -90,7 +127,7 @@ row as a single `Run` fetching `noise_pred` only, and drops the onnx +
 9.0 GB → **7.14 GB**, row pass 2.07 s → ~1.6 s, bit-identical output,
 ~6.8 s session create. w8a16 was rejected (only ~0.5 GB saved: runlist
 133 MB + ~210 MB spill-fill per block, 15% slower) and FP16 pins the
-same 245 MB weights per block — see `docs/ai_pipeline.md`.
+same 245 MB weights per block — see `docs/ai_pipeline_logs.md`.
 
 Only one stage's sessions exist at a time: transformer (released after
 sampling) → VAE, created after sampling since `vae_post` alone pins a
@@ -141,9 +178,16 @@ adb push <photo.png> /sdcard/Download/triposg-test.png
 # once: open the app's photo picker so shared-storage reads are allowed
 adb shell am broadcast -a expo.modules.triposg.DEBUG_CONVERT
 # optional: -e image file:///sdcard/Download/other.png
+# golden-noise grading: -e noise <device path to (1,2048,64) f32 .npy> -e tag <run-name>
 adb logcat -s TripoSGDebug
 ```
 
-Fixed knobs (50 steps, guidance 7.0, seed 42, d0 6 / d1 8, 100k display
-tris); GLBs land in the app cache `triposg/debug/`. The receiver no-ops
-unless the app is debuggable, so release builds are unaffected.
+Fixed knobs (50 steps, guidance 7.0, d0 6 / d1 8, 100k display tris);
+seed 42 unless `-e noise` is given. GLBs land in the app cache
+`triposg/debug[/<tag>/]`, and one TIMINGS line logs per-stage wall
+seconds at DONE. Grade with
+`python -u ml/triposg-mobile/parity/run_phase1.py --candidate-dir
+<tag-dir>` (see the ml README). The receiver no-ops unless the app is
+debuggable — build one with `TRIPOSG_DEBUGGABLE=1` in the prebuild
+environment instead of hand-editing `android/` — so release builds are
+unaffected.

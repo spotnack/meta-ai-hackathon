@@ -78,6 +78,24 @@ struct RgbFloat {
 // before calling rembg).
 bool HasValidAlpha(const RgbaImage& img);
 
+// Mask quality stats for the cut-out preview warnings (nativeCutout).
+// border_touch: max over the 4 edges of (alpha>0 pixels / edge length).
+// A centered subject never touches the frame, and Lanczos halos are
+// ~1-2 px (<1% of a long edge), so >= 10% of an edge means the subject
+// is cut off by the frame. area_frac: alpha>0 pixels / all pixels;
+// below 5% of the frame there are too few subject pixels for a reliable
+// reconstruction ("no clear object"). big_components: 4-connected
+// alpha>0 components covering more than kMinComponentFrac of the mask
+// area each; u2net speckle is sub-1% while a second subject is
+// comparable in size to the first.
+struct MaskStats {
+  float border_touch = 0;
+  float area_frac = 0;
+  int big_components = 0;
+};
+constexpr float kMinComponentFrac = 0.05f;
+MaskStats AnalyzeMask(const uint8_t* alpha, int w, int h);
+
 // cv2 INTER_AREA downscale to a 2000-px long side (copy if smaller).
 // Port of the load_image block; operates on all 4 channels.
 RgbaImage Downscale2000(const RgbaImage& rgba);
