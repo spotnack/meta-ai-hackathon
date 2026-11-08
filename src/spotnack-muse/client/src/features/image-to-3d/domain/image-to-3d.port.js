@@ -2,7 +2,7 @@
  * @file Ports (contracts) for the image-to-3D workflow.
  *
  * ImageTo3dPort is satisfied today by placeholder-image-to-3d.adapter.js, which simulates
- * the pipeline without running inference. The on-device AI pipeline (docs/ai_pipeline.md)
+ * the pipeline without running inference. The on-device AI pipeline (docs/ai_pipeline_logs.md)
  * plugs in by implementing the same contract and swapping the adapter in
  * use-image-to-3d-conversion.hook.js - nothing above that hook changes.
  *
@@ -18,6 +18,7 @@
  * @property {AbortSignal} [signal] - Aborted when the user stops the conversion. The pipeline must then stop
  * as soon as it can, delete any temporary output, and reject with ImageTo3dCancelledError
  * (image-to-3d-conversion.entity.js) instead of resolving.
+ * @property {{d0: number, d1: number}} [depth] - Extraction depths (default {d0: 6, d1: 8}; high detail {d0: 6, d1: 9}).
  */
 
 /**

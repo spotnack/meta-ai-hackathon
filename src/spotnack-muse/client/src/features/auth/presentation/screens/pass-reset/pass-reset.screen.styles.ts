@@ -39,13 +39,17 @@ export const Title = styled(ThemedText)`
   margin-bottom: ${Spacing.three}px;
 `;
 
+// Border of an input with a field error.
+const INPUT_ERROR_COLOR = "#ff6b6b";
+
 export const StyledInput = styled(TextInput).attrs({
   placeholderTextColor: "rgba(255,255,255,0.4)",
-})`
+})<{ $hasError?: boolean }>`
   width: 100%;
   border-radius: 25px;
   border-width: 1px;
-  border-color: rgba(255, 255, 255, 0.4);
+  border-color: ${({ $hasError }) =>
+    $hasError ? INPUT_ERROR_COLOR : "rgba(255, 255, 255, 0.4)"};
   background-color: transparent;
   padding-vertical: 14px;
   padding-horizontal: 20px;
@@ -91,4 +95,3 @@ export const FieldErrorText = styled(ThemedText)`
   align-self: flex-start;
 `;
 
-export const INPUT_ERROR_STYLE = { borderColor: "#ff6b6b" } as const;

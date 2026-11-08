@@ -1,12 +1,11 @@
 // React components:
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { scheduleOnRN } from "react-native-worklets";
 import { useGLTF } from "@react-three/drei/native";
 import { Ionicons } from "@expo/vector-icons";
-import { MenuView } from "@expo/ui/community/menu";
 
 // Theme:
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -20,13 +19,23 @@ import {
   InfoColumn,
   DateText,
   MenuTrigger,
-  cardStyles,
+  MenuAnchor,
+  BusyMenuTrigger,
   MENU_ICON_COLOR,
 } from "./explore-card.component.styles";
 
 // Custom Components:
 import { GlbModelViewer } from "./glb-model-viewer.component";
 import { ModelPlaceholderComponent } from "./model-placeholder.component";
+import { useGlViewLease } from "./gl-view-lease";
+import {
+  getSavedModelPreview,
+  subscribeModelPreviews,
+} from "./model-preview-snapshot";
+import {
+  LIVE_PREVIEW,
+  resolveCardPreview,
+} from "./gl-preview-policy";
 
 // Feature Components:
 import { FavouritesCardButton } from "@features/favourites/presentation/components/favourites-card-button/favourites-card-button.component";
@@ -58,7 +67,11 @@ const toNativeMenuActions = (menuActions) =>
 
 /*
 The one card for every explorable item, from the library and the user's own creations alike.
-- Preview: a renderable model (item.thumbnail) spins in the 3D viewer; otherwise a placeholder shows item.photos[0].
+- Preview: a renderable model (item.thumbnail) spins in the 3D viewer while the card holds a live-GL
+  lease (at most MAX_LIVE_GL_VIEWS cards app-wide); otherwise the card shows a still of the model
+  (item.previewImage: pre-rendered for the bundled food, saved after the first live render for the
+  user's own creations), or the photo placeholder when no still exists yet. While a conversion runs
+  (`previewOnly`) every card stays static so the NPU keeps its memory.
 - A single tap opens pageToNavigate; a double tap (or the bookmark) toggles the favourite.
 - An optional item.createdAt is shown under the name.
 - `menuActions` ([{ id, title, icon, destructive, onPress }]) adds an options menu in the upper-right corner.
@@ -68,9 +81,11 @@ The one card for every explorable item, from the library and the user's own crea
 export const ExploreCardComponent = ({
   item,
   pageToNavigate,
-  style,
+  fullWidth = false,
   menuActions = [],
   isBusy = false,
+  glVisible = true,
+  previewOnly = false,
 }) => {
   const router = useRouter();
   const colorScheme = useColorScheme();
@@ -79,10 +94,35 @@ export const ExploreCardComponent = ({
 
   const isFavourite = item ? favourites.find((r) => r.id === item.id) : null;
   const modelUri = item?.thumbnail?.[0];
+  // A live canvas mounts only for a visible card that holds a lease; every
+  // other state (converting, off-screen, out of leases) renders the static
+  // photo placeholder instead of attempting GL.
+  const leaseGranted = useGlViewLease(
+    item?.id,
+    glVisible && !previewOnly && Boolean(modelUri),
+  );
+  const preview = resolveCardPreview({ modelUri, previewOnly, leaseGranted });
 
+  // Still of the model for the static state: bundled/persisted, or saved
+  // in this session by any card showing the same creation.
+  const snapshotTarget = item?.previewSnapshotUri ?? null;
+  const [sessionStill, setSessionStill] = useState(() =>
+    getSavedModelPreview(snapshotTarget),
+  );
   useEffect(() => {
-    if (modelUri) useGLTF.preload(modelUri);
-  }, [modelUri]);
+    setSessionStill(getSavedModelPreview(snapshotTarget));
+    if (!snapshotTarget) return undefined;
+    return subscribeModelPreviews((target, savedUri) => {
+      if (target === snapshotTarget) setSessionStill(savedUri);
+    });
+  }, [snapshotTarget]);
+  const stillUri = item?.previewImage ?? sessionStill;
+
+  // Preload only while the card wants a live view: a preloaded multi-MB
+  // GLB sits in JS memory, which is exactly what a conversion is short of.
+  useEffect(() => {
+    if (modelUri && glVisible && !previewOnly) useGLTF.preload(modelUri);
+  }, [modelUri, glVisible, previewOnly]);
 
   const navigateToItem = () => {
     if (!item) return;
@@ -127,33 +167,42 @@ export const ExploreCardComponent = ({
 
   return (
     <>
-      <ExploreCard style={style}>
+      <ExploreCard $fullWidth={fullWidth}>
         <GestureDetector gesture={exclusiveGesture}>
           <View
             collapsable={false}
             accessibilityRole="button"
             accessibilityLabel={`Open ${name}`}
           >
-            {modelUri ? (
-              <GlbModelViewer uri={modelUri} />
+            {preview === LIVE_PREVIEW ? (
+              <GlbModelViewer
+                uri={modelUri}
+                photoUri={photos?.[0]}
+                // Own creation without a still yet: save one once it renders.
+                snapshotUri={stillUri ? null : snapshotTarget}
+              />
             ) : (
-              <ModelPlaceholderComponent photoUri={photos?.[0]} />
+              // A real creation that is merely static (lease cap or a
+              // running conversion) must never wear the PLACEHOLDER
+              // badge: badge only when there is genuinely no model.
+              <ModelPlaceholderComponent
+                photoUri={photos?.[0]}
+                previewUri={stillUri}
+                badgeText={modelUri ? null : undefined}
+                caption={modelUri ? "Tap to view in 3D" : undefined}
+              />
             )}
           </View>
         </GestureDetector>
         {menuActions.length > 0 &&
           (isBusy ? (
-            <MenuTrigger
-              style={cardStyles.menuAnchor}
-              accessibilityState={{ busy: true }}
-            >
+            <BusyMenuTrigger accessibilityState={{ busy: true }}>
               <ActivityIndicator size="small" color={MENU_ICON_COLOR} />
-            </MenuTrigger>
+            </BusyMenuTrigger>
           ) : (
             // Native menu (SwiftUI on iOS, Material on Android). The trigger must be a plain
             // View: MenuView provides the press handling itself.
-            <MenuView
-              style={cardStyles.menuAnchor}
+            <MenuAnchor
               actions={toNativeMenuActions(menuActions)}
               onPressAction={handleMenuAction}
               colorScheme={colorScheme}
@@ -169,7 +218,7 @@ export const ExploreCardComponent = ({
                   color={MENU_ICON_COLOR}
                 />
               </MenuTrigger>
-            </MenuView>
+            </MenuAnchor>
           ))}
         <CardBottomContainer>
           <CardInfoContainer>

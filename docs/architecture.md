@@ -1,5 +1,5 @@
 <div align='center'>
-  <h1> Mobile Architecture</h1>
+  <h1> Mobile Architecture </h1>
 </div>
 
 # Table of Contents
@@ -44,16 +44,17 @@ Each feature is split into the layers it needs:
 <details>
   <summary><h1 id="backend">Backend</h1></summary>
 
-- API communication: RESTful API built with Express.js and mounted at `/api` in `app.js`. `server.js` starts the HTTP listener.
+- API communication: RESTful API built with Express.js and mounted at `/api` in `app.js`. `server.js` starts the HTTP listener. `app.js` also sets security headers (Helmet), response compression, request logging (Morgan) and a central JSON error handler.
 
-- Each frontend feature's `infrastructure/` layer (e.g. `features/generated-shapes/infrastructure/generated-shapes.api.adapter.js`) defines the requests it makes: URL/endpoint, method, and body. On the server, every resource is a **route → middleware → repository** trio:
-  - `routes/` maps HTTP methods and paths to handlers. `routes/index.js` aggregates them.
-  - `middlewares/` validates input with Joi and contains the handlers.
-  - `repositories/` owns data access and delegates storage to `db/client.js`.
-  - `services/` contains reusable integrations (e.g., `cognito.service.js`).
-  - `auth/cognito/` contains the authentication middleware, ready to attach to protected routes.
+- Each frontend feature's `infrastructure/` layer defines the requests it makes (e.g. `features/auth/infrastructure/auth.api.ts` for the auth endpoints below). On the server, a request goes **route → guards → handler**:
+  - `routes/` maps HTTP methods and paths to handlers. `routes/index.js` mounts every router under `/api` and returns a JSON 404 for unknown paths. The auth handlers are written inline in `routes/auth.routes.js`.
+  - `middlewares/` holds the request guards for the auth API (`requireJson`, `validateBody`) and the health-check handler.
+  - `validators/` holds the Joi schemas that `validateBody` applies to each auth request body.
+  - `auth/cognito/` holds the Amazon Cognito integration: SDK calls (`cognito.service.js`), error mapping, JWT verification with cached JWKS, and `requireAuth`, a middleware ready for protected routes (no route uses it yet). `auth/session.js` and `auth/user.js` build the session and the public user from the Cognito tokens.
 
-- Configuration: `src/config/env.js` loads `server/.env` from an explicit path and exposes the SMTP, `GENERATED_SHAPES_DATA_FILE`, and AWS Cognito settings.
+- Configuration: `src/config/auth.config.js` loads `server/.env` and exposes the Cognito settings (region, user pool ID, client ID, hosted-UI domain, redirect URIs). Every `/api/auth/*` endpoint except `/config` returns 503 until Cognito is configured. `src/config/env.js` defines `GENERATED_SHAPES_DATA_FILE` for a future generated-shapes API. Nothing uses it yet, because the app stores generated shapes on the phone (`generated-shapes.file-system.adapter.js`).
+
+- Storage: the server has no database or data-access layer. `src/db/data/generated_shapes.json` is an empty placeholder.
 
 Endpoints:
 
@@ -71,7 +72,7 @@ Endpoints:
 | `POST` | `/api/auth/reset-password`  | Set new password with reset code.                     |
 | `POST` | `/api/auth/sign-out`        | Revoke refresh token; returns hosted-UI logout URL.   |
 
-`models.routes.js` and `payments.routes.js` are placeholders.
+`/api/models` and `/api/payments` are mounted but have no endpoints yet (`models.routes.js` and `payments.routes.js` are placeholders). `POST /api/auth/refresh?fresh=1` is a hook for adding app data to the user (e.g. a subscription plan) without a cache. By default it has no effect.
 
 </details>
 <!-- #endregion -->
@@ -88,10 +89,11 @@ Endpoints:
     └── ci.yml                                     # GitHub Actions CI (linting).
 assets/                                            # Images used by the README.
 docs/
-├── ai_pipeline.md                                 # The on-device AI pipeline for generating 3D models from 2D images.
+├── ai_pipeline_logs.md                            # The on-device AI pipeline for generating 3D models from 2D images.
 ├── ai_pipeline_plan.md                            # Phased plan for the on-device AI pipeline (phases, files, decisions).
 ├── architecture.md                                # This file.
 ├── deployment.md                                  # Guide to deploy the app to production.
+├── reproduce_from_scratch.md                      # Fresh clone → models built, app installed, on-device inference.
 └── index.html                                     # GitHub Pages landing page (Google Search Console verification).
 ml/
 └── triposg-mobile/                                # TripoSG conversion/parity/benchmark tooling (weights and large logs git-ignored).
@@ -108,7 +110,36 @@ ml/
     └── bench/ndk/                               # NDK benchmark sources (bench.cpp, CMake, build.sh).
     ├── bench/spike_transformer_export.py        # FP16 one-step export (mmap, external data).
     ├── eval/manifest_5.json                       # 5-image golden-set manifest (pre-cut inputs, fixed seeds).
-    └── reference/triposg_golden_5.ipynb           # Colab GPU notebook you run for the 5 goldens.
+    ├── reference/triposg_golden_5.ipynb           # Colab GPU notebook you run for the 5 goldens.
+    ├── reference/decimate_display.py              # Decimate goldens to ~80k-face display meshes.
+    ├── parity/tensor_parity.py                    # Generic tensor comparator (single math implementation).
+    ├── parity/check_step0.py                      # Thin one-step gate wrapper over tensor_parity.
+    ├── parity/mesh_parity.py                      # Chamfer + F-score (cKDTree) + volume IoU + --render.
+    ├── parity/thresholds.json + THRESHOLDS.md     # Acceptance thresholds, fixed before optimizing.
+    ├── parity/run_phase1.py                       # One-command Phase 1 driver (hashes, baselines, report).
+    ├── parity/test_parity.py                      # Synthetic harness regression tests (pytest).
+    ├── logs/phase1/                               # phase1_report.json + .md (git-ignored raw logs).
+    ├── eval/matrix.md                             # Phase 2 per-component × runtime matrix (measured/linked).
+    ├── eval/summary.md                            # Phase 2 recommendation + knob trade-off tables.
+    ├── bench/export_vae.py                        # VAE decoder export: vae_post + vae_query (FP32, fixed N).
+    ├── bench/split_export_step.py                 # Transformer split batch-1 export (23 units, laptop).
+    ├── bench/aihub_compile.py                     # AI Hub compile/profile/manifest (transformer + VAE stems).
+    ├── bench/spike_adb_chain_npu.sh               # One-step chain runs on the phone NPU.
+    ├── bench/spike_adb_pipeline.sh                # Full sampling→mesh runs on the phone NPU.
+    ├── bench/ndk/chain.cpp                        # spike_chain: one guided step over 23 resident units.
+    ├── bench/ndk/pipeline.cpp                     # spike_pipeline: loop + VAE + extract + mesh on device.
+    ├── cpp/extract.{h,cpp}                        # Portable octree SDF extraction (pluggable backend).
+    ├── cpp/mcubes.{h,cpp}                         # Portable marching tetrahedra + outward normals.
+    ├── cpp/glb_writer.{h,cpp}                     # Minimal valid glTF 2.0 binary writer.
+    ├── cpp/test/                                  # Laptop host test (ORT CPU backend, grades vs goldens).
+    ├── cpp/CMakeLists.txt                         # triposg_core static lib (reused by the Expo module).
+    ├── cpp/test/test_preprocess.cpp               # Front-end host test (u2net CPU + prepare + pixel_values).
+    ├── cpp/test/prep_preprocess_inputs.py         # PNG sources + golden prepared -> .npy fixtures.
+    ├── cpp/test/make_preprocess_refs.py           # Bit-exact stage refs via real load_image + BitImageProcessor.
+    ├── cpp/test/check_preprocess.py               # Grades cutout/prepared/pixel_values vs goldens.
+    ├── bench/make_model_manifest.py               # Hashes all model files -> models_manifest.json.
+    ├── bench/sideload_models.sh                   # adb-pushes models + manifest to the app dir.
+    └── logs/phase2/                               # Phase 2 parity reports + phone/AI Hub logs (git-ignored).
 src/
 └── spotnack-muse/                                 # Yarn workspace root.
     ├── .yarn/                                     # Yarn Berry releases and cache.
@@ -138,6 +169,7 @@ src/
     │   │   │   ├── SignInScreen.tsx               # Route shim: sign-in feature screen.
     │   │   │   ├── SignUpScreen.tsx               # Route shim: sign-up feature screen.
     │   │   │   └── Stage3dScreen.tsx              # Full-screen 3D stage viewer.
+    │   │   │   (dev-triposg.jsx deleted in part B; adb trigger is TripoSGDebugReceiver in the module).
     │   │   ├── config/
     │   │   │   └── api.js                         # Resolves the API base URL from the environment.
     │   │   ├── features/
@@ -179,6 +211,9 @@ src/
     │   │   │   │       │   ├── explore-card/
     │   │   │   │       │   │   ├── explore-card.component.jsx         # The one card for library items and the user's creations: 3D viewer or placeholder, bookmark, optional options menu.
     │   │   │   │       │   │   ├── explore-card.component.styles.jsx  # Styled components for the explore card.
+    │   │   │   │       │   │   ├── gl-availability.js                 # Non-fatal guard for expo-gl context failures (global-handler filter + subscriber notify).
+    │   │   │   │       │   │   ├── gl-preview-policy.js               # Pure live-vs-static card policy + visible-id slicing.
+    │   │   │   │       │   │   ├── gl-view-lease.js                   # App-wide cap (2) on concurrent live GL views + useGlViewLease hook.
     │   │   │   │       │   │   ├── glb-model-viewer.component.jsx     # Three.js Canvas.
     │   │   │   │       │   │   └── model-placeholder.component.jsx    # Stand-in for a model that can't be rendered (card and 3D stage).
     │   │   │   │       │   ├── explore-section-list/
@@ -227,19 +262,27 @@ src/
     │   │   │   │       └── home.screen.view-model.ts    # Exposes the image-to-3D use case and its navigation.
     │   │   │   ├── image-to-3d/
     │   │   │   │   ├── application/
-    │   │   │   │   │   └── use-image-to-3d-conversion.hook.js      # Use case: pick an image, convert it, save it as a generated shape.
+    │   │   │   │   │   ├── use-image-to-3d-conversion.hook.js      # Use case: pick an image, convert it, save it as a generated shape (ondevice port swap + persisted-job resume, no background cancel).
+    │   │   │   │   │   ├── use-conversion-running.hook.js + .test.js  # Shared "a conversion is running" signal from the persisted job record (drives Explore static thumbnails).
+    │   │   │   │   │   ├── persisted-job-plan.js + .test.js        # Pure resume/complete matrix over the persisted job record.
+    │   │   │   │   │   └── use-model-management.hook.js            # Owns the TripoSG model set (download/pause/verify/delete) for the card row.
     │   │   │   │   ├── domain/
-    │   │   │   │   │   ├── image-to-3d-conversion.entity.js        # Conversion states and the photo permission error.
-    │   │   │   │   │   └── image-to-3d.port.js                     # Ports for the conversion pipeline and the image source.
+    │   │   │   │   │   ├── image-to-3d-conversion.entity.js        # Conversion states, photo permission + cancelled + unavailable errors.
+    │   │   │   │   │   ├── image-to-3d.port.js                     # Ports for the conversion pipeline and the image source.
+    │   │   │   │   │   └── model-management.port.js                # Model set states, byte formatting, download/space/sideload errors.
     │   │   │   │   ├── infrastructure/
     │   │   │   │   │   ├── image-library.adapter.js                # Image source backed by the device photo library (expo-image-picker).
-    │   │   │   │   │   ├── placeholder-image-to-3d.adapter.js      # Simulated pipeline (no inference). Swap for the real AI adapter.
-    │   │   │   │   │   ├── demo-goldens.config.js                  # Demo mode: golden ids, URLs, bundled mesh modules, honest labels.
-    │   │   │   │   │   ├── demo-goldens-image-source.adapter.js    # Demo source: round-robin over the 5 golden inputs (HTTP).
-    │   │   │   │   │   ├── demo-goldens-image-to-3d.adapter.js     # Demo pipeline: copies the matching bundled display mesh.
-    │   │   │   │   │   └── demo-goldens/<id>/mesh.display.glb      # 5 bundled display meshes (~80k faces, ~1.6 MB each).
+    │   │   │   │   │   ├── placeholder-image-to-3d.adapter.js      # Simulated pipeline (no inference). Fallback when on-device is unavailable.
+    │   │   │   │   │   ├── triposg-image-to-3d.adapter.js          # Real pipeline over @spotnack/triposg (events→port promise, label map, GLB copy, job attach + record clearing, high-detail 200k display).
+    │   │   │   │   │   ├── triposg-image-to-3d.adapter.test.js     # Progress/cancel/error/attach/copy mapping against a mocked native module.
+    │   │   │   │   │   ├── cutout-warnings.js + .test.js           # Pure warning rules over native cut-out mask stats.
+    │   │   │   │   │   ├── storage-sweep.js + .test.js             # Startup sweep: pure keep/delete plan over native storage state + best-effort runner.
+    │   │   │   │   │   ├── model-management.adapter.js             # Derived model state + download/verify/delete over the native module.
+    │   │   │   │   │   ├── model-management.adapter.test.js        # State machine (7 states, metered/space/sideload, corrupt retry).
+    │   │   │   │   │   ├── triposg-models.manifest.js              # GENERATED manifest copy (make_model_manifest.py --js-out).
+    │   │   │   │   │   └── image-to-3d-mode.config.js              # Build-time mode: placeholder (default) or ondevice.
     │   │   │   │   └── presentation/components/
-    │   │   │   │       └── image-to-3d-card/                       # Home card: photo picker, preview, progress and "Convert to 3D".
+    │   │   │   │       └── image-to-3d-card/                       # Home card: photo picker, cut-out preview + warnings, progress, model-status row, high-detail toggle, "Convert to 3D" (+ render test).
     │   │   │   ├── profile/
     │   │   │   │   └── presentation/screen/
     │   │   │   │       ├── profile.screen.tsx         # Profile screen: displays user info and sign-out button.
@@ -276,9 +319,28 @@ src/
     │   │   │           └── screen-container.tsx   # Full-screen safe-area wrapper with theme background.
     │   │   └── global.css                         # Global CSS (web target).
     │   ├── .gitignore                             # Git ignore for the client workspace.
-    │   ├── .env.example                           # Example EXPO_PUBLIC_* vars (image-to-3D demo mode).
+    │   ├── modules/triposg/                       # Local Expo module: on-device TripoSG (Phase 3A + part B integration).
+    │   │   ├── package.json + expo-module.config.json  # @spotnack/triposg (portal dep), autolink config.
+    │   │   ├── app.plugin.js                      # Config plugin (in app.json): QNN jniLibs excludes (V79 + system only, Prepare excluded too) + TRIPOSG_DEBUGGABLE=1 opt-in debuggable release.
+    │   │   ├── index.js                           # JS API: status/verify/convert/cancel/release + download/preflight/progress/delete + storage sweep + events.
+    │   │   ├── THIRD_PARTY_LICENSES.md            # ORT, qnn-runtime, meshoptimizer, u2net, TripoSG, DINOv2.
+    │   │   ├── android/build.gradle + CMakeLists.txt + src/main/AndroidManifest.xml  # ORT 1.29/QNN 2.50 from Maven, AAR extract for CMake, debug receiver.
+    │   │   ├── android/.../TripoSGModule.kt       # Expo module: preflight, decode, job queue, progress events, download fns, idle-only trim release, job record (getPendingJob/clearJob deletes saved folders), storage sweep (getStorageState/deleteSweepPaths).
+    │   │   ├── android/.../TripoSGService.kt      # dataSync foreground service for conversions (Cancel) and the model download (Pause, Wi-Fi lock): notification, wake lock, 1 Hz repaint, self-stop.
+    │   │   ├── android/.../TripoSGJobs.kt         # Persisted job record (filesDir/triposg/job.json) + worker-alive flag.
+    │   │   ├── android/.../TripoSGDownload.kt     # Resumable Range downloader (part files, sha256, manifest write).
+    │   │   ├── android/.../TripoSGDebugReceiver.kt + TripoSGDebug  # Debuggable-only adb trigger (no UI): image/noise/tag extras, TIMINGS line.
+    │   │   ├── android/.../cpp/jni_bridge.cpp     # JNI: engine singleton, progress callbacks, verify, debug entry.
+    │   │   ├── cpp/pipeline.{h,cpp}               # Engine: sampler + VAE + extract + GLB orchestration.
+    │   │   ├── cpp/preprocess.{h,cpp}             # u2net bg removal + prepare_image + DINOv2 preprocessing.
+    │   │   ├── cpp/decimate.{h,cpp}               # meshoptimizer display decimation (default 100k tris).
+    │   │   ├── cpp/models.{h,cpp}                 # Manifest parse + size/sha256 verification.
+    │   │   ├── cpp/third_party/meshoptimizer/     # Vendored simplifier (v0.24) + fetch README.
+    │   │   └── ios/TripoSGModule.swift + TripoSG.podspec  # iOS stub: reports unsupported.
+    │   ├── .env.example                           # Example EXPO_PUBLIC_* vars (image-to-3D mode, demo auth).
     │   ├── AGENTS.md                              # Agent instructions for this workspace.
     │   ├── app.json                               # Expo app config: name, scheme, icons, splash, and plugins.
+    │   ├── app.config.js                          # Local variant: APP_VARIANT=ondevice -> com.spotnackmuse.ondevice.
     │   ├── expo-env.d.ts                          # Expo TypeScript environment declarations.
     │   ├── jest.config.js                         # Jest (jest-expo) config for client unit tests, with the tsconfig path aliases.
     │   ├── metro.config.js                        # Metro bundler config: .glb assets, process-emit-warning polyfill.
@@ -290,19 +352,19 @@ src/
     │   │   ├── auth/
     │   │   │   ├── cognito/
     │   │   │   │   ├── cognito.errors.js          # Maps Cognito error codes to internal error constants.
-    │   │   │   │   ├── cognito.middleware.js      # Express middleware: verifies Cognito JWT on protected routes.
+    │   │   │   │   ├── cognito.middleware.js      # requireAuth: verifies the Cognito JWT (not used by any route yet).
     │   │   │   │   ├── cognito.service.js         # Cognito SDK calls: signUp, signIn, forgotPassword, etc.
     │   │   │   │   ├── jwks.js                    # Fetches and caches Cognito JWKS for JWT verification.
     │   │   │   │   └── verifyJwt.js               # Verifies and decodes a Cognito ID/access token.
     │   │   │   ├── session.js                     # Builds a session object from a verified Cognito token.
     │   │   │   └── user.js                        # Extracts user info from Cognito token claims.
     │   │   ├── config/
-    │   │   │   ├── auth.config.js                 # Cognito client ID, user pool ID, hosted UI domain.
-    │   │   │   └── env.js                         # Loads .env and exposes typed config values.
+    │   │   │   ├── auth.config.js                 # Loads .env, Cognito region, pool, client ID, hosted UI, redirect URIs.
+    │   │   │   └── env.js                         # GENERATED_SHAPES_DATA_FILE path (unused for now).
     │   │   ├── db/data/
-    │   │   │   └── generated_shapes.json          # Persistent store for generated 3D shapes.
+    │   │   │   └── generated_shapes.json          # Empty placeholder (no code reads it).
     │   │   ├── middlewares/
-    │   │   │   ├── auth.security.middleware.js    # Rate-limiting and brute-force protection for auth routes.
+    │   │   │   ├── auth.security.middleware.js    # Auth guards: JSON-only requests, Joi body validation.
     │   │   │   └── health.middleware.js           # Health-check handler.
     │   │   ├── routes/
     │   │   │   ├── index.js                       # Aggregates all routers and mounts them under /api.
@@ -316,7 +378,7 @@ src/
     │   ├── .gitignore                             # Git ignore for the server workspace.
     │   ├── app.js                                 # Express app: security middleware, /api routes, and error handler.
     │   ├── eslint.config.js                       # Server ESLint flat config.
-    │   ├── jest.config.cjs                        # Jest config for the server workspace (supertest, fast-check).
+    │   ├── jest.config.cjs                        # Jest config for the server workspace (no server tests yet).
     │   ├── jest.setup.js                          # Redirects GENERATED_SHAPES_DATA_FILE to a temp file before tests.
     │   ├── package.json                           # Server dependencies and scripts.
     │   └── server.js                              # HTTP server entry point.
@@ -349,7 +411,7 @@ README.md
 
 - **Linting:** ESLint 9 flat config. `eslint.config.cjs` covers the client and `server/eslint.config.js` covers the server. Prettier is integrated through `eslint-plugin-prettier`. Run with `yarn lint` or `yarn lint:fix`.
 
-- **Testing:** the root `jest.config.cjs` runs both workspaces through Jest `projects`. The client uses the `jest-expo` preset with `@testing-library/react-native`. The server uses Jest with `supertest`, and `jest.setup.js` redirects `GENERATED_SHAPES_DATA_FILE` to a temporary file. Both workspaces use `fast-check` for property-based tests. Run with `yarn test`.
+- **Testing:** the root `jest.config.cjs` runs both workspaces through Jest `projects`. The client uses the `jest-expo` preset with `@testing-library/react-native`. The server workspace is set up for Jest with `supertest` and `fast-check` (and `jest.setup.js` points `GENERATED_SHAPES_DATA_FILE` at a temporary file), but it has no test files yet. Run with `yarn test`.
 
 - **Git hooks:** `.pre-commit-config.yaml` runs Black, Flake8, and ESLint. The Python tooling is defined in `environment.yml` (conda).
 

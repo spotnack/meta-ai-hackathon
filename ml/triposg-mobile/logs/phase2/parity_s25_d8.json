@@ -1,0 +1,1417 @@
+{
+  "params": {
+    "samples": 20000,
+    "tau": 0.01,
+    "grid": 64
+  },
+  "thresholds": {
+    "dinov2_last_hidden_state": {
+      "cosine_min": 0.99999,
+      "rel_l2_max": 0.0001,
+      "max_abs_max": 0.001
+    },
+    "step0_noise_pred": {
+      "cosine_min": 0.999,
+      "rel_l2_max": 0.01
+    },
+    "final_latents": {
+      "cosine_min": 0.99,
+      "rel_l2_max": 0.05,
+      "provisional": true
+    },
+    "mesh": {
+      "chamfer_over_diag_max": 0.01,
+      "f_score_min": 0.9,
+      "volume_iou_min": 0.95,
+      "tau_frac": 0.01,
+      "samples": 20000,
+      "grid": 64
+    }
+  },
+  "manifest_ids": [
+    "hjswed",
+    "iuvbww",
+    "qwvfsd",
+    "uegvsd",
+    "yuyyuw"
+  ],
+  "report_ids": [
+    "hjswed",
+    "iuvbww",
+    "qwvfsd",
+    "uegvsd",
+    "yuyyuw"
+  ],
+  "ids_match": true,
+  "ids": {
+    "hjswed": {
+      "sha256": {
+        "dinov2_last_hidden_state.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "40ac6fd25b56b8fb6cec1ea7718464ae52e37a252acb007519b9577aba5e1e58",
+          "actual": "40ac6fd25b56b8fb6cec1ea7718464ae52e37a252acb007519b9577aba5e1e58"
+        },
+        "dinov2_pixel_values.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "bbf1338ea2533dca7ecdd74f39a0884d6ab8b4ff4a545311925d7e954da9360a",
+          "actual": "bbf1338ea2533dca7ecdd74f39a0884d6ab8b4ff4a545311925d7e954da9360a"
+        },
+        "final_latents.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "0b9114c71bac4dd260a27f50b0a0c3d17fb980b5c929413800c49def68eacfb1",
+          "actual": "0b9114c71bac4dd260a27f50b0a0c3d17fb980b5c929413800c49def68eacfb1"
+        },
+        "input_rgba.png": {
+          "ok": true,
+          "missing": false,
+          "expected": "89e7910143cd3b871201e98b94f5a0c34cab35c913fa770aaa425a5cc452a7af",
+          "actual": "89e7910143cd3b871201e98b94f5a0c34cab35c913fa770aaa425a5cc452a7af"
+        },
+        "mesh.glb": {
+          "ok": true,
+          "missing": false,
+          "expected": "2125fef23759b6876ecae610c3f2ede4f41e61fdf0ec5abaa4973059f41495b3",
+          "actual": "2125fef23759b6876ecae610c3f2ede4f41e61fdf0ec5abaa4973059f41495b3"
+        },
+        "prepared_input.png": {
+          "ok": true,
+          "missing": false,
+          "expected": "446d5b55cf0c61e8a331892c3aca1d3d9167269e19d278bb39eafb25335ed740",
+          "actual": "446d5b55cf0c61e8a331892c3aca1d3d9167269e19d278bb39eafb25335ed740"
+        },
+        "step0_encoder_hidden_states.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "73cf22f38c66b82299a975d9db446a82456e7aada26d836883bdbb17dd64d3f4",
+          "actual": "73cf22f38c66b82299a975d9db446a82456e7aada26d836883bdbb17dd64d3f4"
+        },
+        "step0_latent_model_input.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "b8e3a6410e1dc3586d4ca3fa8d5aa062c33fa0f1e30e041d199ad491cbfed1b2",
+          "actual": "b8e3a6410e1dc3586d4ca3fa8d5aa062c33fa0f1e30e041d199ad491cbfed1b2"
+        },
+        "step0_noise_pred.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "b73dab068e6d0dd936c58073763154207a5ae3367e9f7ff4b96cfa2a6473b310",
+          "actual": "b73dab068e6d0dd936c58073763154207a5ae3367e9f7ff4b96cfa2a6473b310"
+        },
+        "step0_timestep.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "6659b47125e4c26a1c7f63796d8e309d3bb7a8d4e6de1a853f4a2407055318e6",
+          "actual": "6659b47125e4c26a1c7f63796d8e309d3bb7a8d4e6de1a853f4a2407055318e6"
+        }
+      },
+      "sha_ok": [
+        10,
+        10
+      ],
+      "shapes": {
+        "dinov2_last_hidden_state.npy": {
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "float32"
+        },
+        "dinov2_pixel_values.npy": {
+          "shape": [
+            1,
+            3,
+            224,
+            224
+          ],
+          "dtype": "float32"
+        },
+        "final_latents.npy": {
+          "shape": [
+            1,
+            2048,
+            64
+          ],
+          "dtype": "float32"
+        },
+        "step0_encoder_hidden_states.npy": {
+          "shape": [
+            2,
+            257,
+            1024
+          ],
+          "dtype": "float32"
+        },
+        "step0_latent_model_input.npy": {
+          "shape": [
+            2,
+            2048,
+            64
+          ],
+          "dtype": "float32"
+        },
+        "step0_noise_pred.npy": {
+          "shape": [
+            2,
+            2048,
+            64
+          ],
+          "dtype": "float32"
+        },
+        "step0_timestep.npy": {
+          "shape": [
+            2
+          ],
+          "dtype": "float32"
+        }
+      },
+      "display_present": true,
+      "display_hashed": false,
+      "baseline_decimation": {
+        "chamfer": 0.009337804914537444,
+        "chamfer_over_diag": 0.0035075764376067643,
+        "precision": 0.99875,
+        "recall": 0.99825,
+        "f_score": 0.9984999374061092,
+        "tau": 0.026621814465456587,
+        "diag": 2.6621814465456586,
+        "tau_frac": 0.01,
+        "samples": 20000,
+        "seed": 0,
+        "seed_ref": 0,
+        "volume": {
+          "iou": 0.9984274109560508,
+          "method": "surface_fill",
+          "watertight": {
+            "candidate": true,
+            "ref": false
+          },
+          "grid": 64,
+          "intersection_voxels": 95869,
+          "union_voxels": 96020
+        },
+        "verts_faces": {
+          "candidate": [
+            40000,
+            80000
+          ],
+          "ref": [
+            661075,
+            1322148
+          ]
+        },
+        "gate": {
+          "pass": true,
+          "reasons": []
+        }
+      },
+      "baseline_sampling": {
+        "chamfer": 0.009307547305780792,
+        "chamfer_over_diag": 0.0034968642556221907,
+        "precision": 0.99815,
+        "recall": 0.9981,
+        "f_score": 0.9981249993738259,
+        "tau": 0.026616839046057616,
+        "diag": 2.6616839046057614,
+        "tau_frac": 0.01,
+        "samples": 20000,
+        "seed": 0,
+        "seed_ref": 1,
+        "volume": {
+          "iou": 1.0,
+          "method": "identical (not recomputed)",
+          "watertight": {
+            "candidate": false,
+            "ref": false
+          },
+          "grid": 64,
+          "intersection_voxels": null,
+          "union_voxels": null
+        },
+        "verts_faces": {
+          "candidate": [
+            661075,
+            1322148
+          ],
+          "ref": [
+            661075,
+            1322148
+          ]
+        },
+        "gate": {
+          "pass": true,
+          "reasons": []
+        }
+      },
+      "pass": true
+    },
+    "iuvbww": {
+      "sha256": {
+        "dinov2_last_hidden_state.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "6f593cc31928df4d85bdd474e7ea8a7d8243a681232f862fc90ce1641d6fe5dc",
+          "actual": "6f593cc31928df4d85bdd474e7ea8a7d8243a681232f862fc90ce1641d6fe5dc"
+        },
+        "dinov2_pixel_values.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "f8f4c73060c7c196baf7af2680d17f3ba90c7851361993e5fff22c3fce33f096",
+          "actual": "f8f4c73060c7c196baf7af2680d17f3ba90c7851361993e5fff22c3fce33f096"
+        },
+        "final_latents.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "f75b9bc70821ebd5255190c2ce67bcead4a211090ae534e1ff20d83ba1c365fd",
+          "actual": "f75b9bc70821ebd5255190c2ce67bcead4a211090ae534e1ff20d83ba1c365fd"
+        },
+        "input_rgba.png": {
+          "ok": true,
+          "missing": false,
+          "expected": "fc631d166b5904bd2b05bb788a1481d12181dd1679ea37e3e598249dee6a0c58",
+          "actual": "fc631d166b5904bd2b05bb788a1481d12181dd1679ea37e3e598249dee6a0c58"
+        },
+        "mesh.glb": {
+          "ok": true,
+          "missing": false,
+          "expected": "1f93bca3d07ce960620a5042a035c37a5e1eb39219a80f4d77e81cd64a6b405b",
+          "actual": "1f93bca3d07ce960620a5042a035c37a5e1eb39219a80f4d77e81cd64a6b405b"
+        },
+        "prepared_input.png": {
+          "ok": true,
+          "missing": false,
+          "expected": "7c1674af7ddd4f16b528747fdc835cd1c3d3642c9ab02db1e7469474a479b167",
+          "actual": "7c1674af7ddd4f16b528747fdc835cd1c3d3642c9ab02db1e7469474a479b167"
+        },
+        "step0_encoder_hidden_states.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "b73cf734836dbe1aa31787a3fd5ee49f8412d4f882639b7c6deaf027b9b9e940",
+          "actual": "b73cf734836dbe1aa31787a3fd5ee49f8412d4f882639b7c6deaf027b9b9e940"
+        },
+        "step0_latent_model_input.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "b11367bd5142d751defd415441669878e7c3aa97965cd41e728290a6415d8370",
+          "actual": "b11367bd5142d751defd415441669878e7c3aa97965cd41e728290a6415d8370"
+        },
+        "step0_noise_pred.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "1a0e9f8ea153eaafe4416627842e0a56d21ca7110e5bfc32650c034e0e74ced4",
+          "actual": "1a0e9f8ea153eaafe4416627842e0a56d21ca7110e5bfc32650c034e0e74ced4"
+        },
+        "step0_timestep.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "6659b47125e4c26a1c7f63796d8e309d3bb7a8d4e6de1a853f4a2407055318e6",
+          "actual": "6659b47125e4c26a1c7f63796d8e309d3bb7a8d4e6de1a853f4a2407055318e6"
+        }
+      },
+      "sha_ok": [
+        10,
+        10
+      ],
+      "shapes": {
+        "dinov2_last_hidden_state.npy": {
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "float32"
+        },
+        "dinov2_pixel_values.npy": {
+          "shape": [
+            1,
+            3,
+            224,
+            224
+          ],
+          "dtype": "float32"
+        },
+        "final_latents.npy": {
+          "shape": [
+            1,
+            2048,
+            64
+          ],
+          "dtype": "float32"
+        },
+        "step0_encoder_hidden_states.npy": {
+          "shape": [
+            2,
+            257,
+            1024
+          ],
+          "dtype": "float32"
+        },
+        "step0_latent_model_input.npy": {
+          "shape": [
+            2,
+            2048,
+            64
+          ],
+          "dtype": "float32"
+        },
+        "step0_noise_pred.npy": {
+          "shape": [
+            2,
+            2048,
+            64
+          ],
+          "dtype": "float32"
+        },
+        "step0_timestep.npy": {
+          "shape": [
+            2
+          ],
+          "dtype": "float32"
+        }
+      },
+      "display_present": true,
+      "display_hashed": false,
+      "baseline_decimation": {
+        "chamfer": 0.010395447861218567,
+        "chamfer_over_diag": 0.0039286798319564005,
+        "precision": 0.994,
+        "recall": 0.99295,
+        "f_score": 0.9934747225647349,
+        "tau": 0.026460409872702335,
+        "diag": 2.6460409872702333,
+        "tau_frac": 0.01,
+        "samples": 20000,
+        "seed": 0,
+        "seed_ref": 0,
+        "volume": {
+          "iou": 0.9996145929137652,
+          "method": "ray_parity",
+          "watertight": {
+            "candidate": true,
+            "ref": true
+          },
+          "grid": 64,
+          "intersection_voxels": 114121,
+          "union_voxels": 114165
+        },
+        "verts_faces": {
+          "candidate": [
+            40000,
+            80000
+          ],
+          "ref": [
+            805278,
+            1610556
+          ]
+        },
+        "gate": {
+          "pass": true,
+          "reasons": []
+        }
+      },
+      "baseline_sampling": {
+        "chamfer": 0.010467022576320012,
+        "chamfer_over_diag": 0.003957526295216125,
+        "precision": 0.9928,
+        "recall": 0.99395,
+        "f_score": 0.9933746671700013,
+        "tau": 0.026448396790117592,
+        "diag": 2.644839679011759,
+        "tau_frac": 0.01,
+        "samples": 20000,
+        "seed": 0,
+        "seed_ref": 1,
+        "volume": {
+          "iou": 1.0,
+          "method": "identical (not recomputed)",
+          "watertight": {
+            "candidate": true,
+            "ref": true
+          },
+          "grid": 64,
+          "intersection_voxels": null,
+          "union_voxels": null
+        },
+        "verts_faces": {
+          "candidate": [
+            805278,
+            1610556
+          ],
+          "ref": [
+            805278,
+            1610556
+          ]
+        },
+        "gate": {
+          "pass": true,
+          "reasons": []
+        }
+      },
+      "pass": true
+    },
+    "qwvfsd": {
+      "sha256": {
+        "dinov2_last_hidden_state.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "949ede96decb085d4529507df0963184cd17d27a12d2be1ec8b919ce9d7de3e6",
+          "actual": "949ede96decb085d4529507df0963184cd17d27a12d2be1ec8b919ce9d7de3e6"
+        },
+        "dinov2_pixel_values.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "86828b2953c13a368d7bd0dc894a4ad7b8c83ddc99e26dcc37e375b4d15ca39b",
+          "actual": "86828b2953c13a368d7bd0dc894a4ad7b8c83ddc99e26dcc37e375b4d15ca39b"
+        },
+        "final_latents.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "0e201651b1e8d87a3a1083545959afad84f3f51ed8a7869aaf6e9ce6b84bb893",
+          "actual": "0e201651b1e8d87a3a1083545959afad84f3f51ed8a7869aaf6e9ce6b84bb893"
+        },
+        "input_rgba.png": {
+          "ok": true,
+          "missing": false,
+          "expected": "92f8fe26809032a2eb51dcd6f256fbe270dcc1500d410b17022cce47d83bd636",
+          "actual": "92f8fe26809032a2eb51dcd6f256fbe270dcc1500d410b17022cce47d83bd636"
+        },
+        "mesh.glb": {
+          "ok": true,
+          "missing": false,
+          "expected": "8f05446ff689550bb9e65847b002fd17c96ca856de3aed3857bd57d4e6605311",
+          "actual": "8f05446ff689550bb9e65847b002fd17c96ca856de3aed3857bd57d4e6605311"
+        },
+        "prepared_input.png": {
+          "ok": true,
+          "missing": false,
+          "expected": "a2d427e39ab12854420f9864c960e062d4f3a51b06dfcff514cf2fc0685bbf03",
+          "actual": "a2d427e39ab12854420f9864c960e062d4f3a51b06dfcff514cf2fc0685bbf03"
+        },
+        "step0_encoder_hidden_states.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "27bea81445ca6fa747fdee07ee21c942be43d5e6de6c3f62bb56c7a3539ab104",
+          "actual": "27bea81445ca6fa747fdee07ee21c942be43d5e6de6c3f62bb56c7a3539ab104"
+        },
+        "step0_latent_model_input.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "a7127f39ace62d3695fe89142ec5a05a3aadaa6fb4152f9fb1577d0f7c65b43e",
+          "actual": "a7127f39ace62d3695fe89142ec5a05a3aadaa6fb4152f9fb1577d0f7c65b43e"
+        },
+        "step0_noise_pred.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "9c519e995bbea4fc4024647fd9de6419d52857813c10d841ec29d79f0e903ddc",
+          "actual": "9c519e995bbea4fc4024647fd9de6419d52857813c10d841ec29d79f0e903ddc"
+        },
+        "step0_timestep.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "6659b47125e4c26a1c7f63796d8e309d3bb7a8d4e6de1a853f4a2407055318e6",
+          "actual": "6659b47125e4c26a1c7f63796d8e309d3bb7a8d4e6de1a853f4a2407055318e6"
+        }
+      },
+      "sha_ok": [
+        10,
+        10
+      ],
+      "shapes": {
+        "dinov2_last_hidden_state.npy": {
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "float32"
+        },
+        "dinov2_pixel_values.npy": {
+          "shape": [
+            1,
+            3,
+            224,
+            224
+          ],
+          "dtype": "float32"
+        },
+        "final_latents.npy": {
+          "shape": [
+            1,
+            2048,
+            64
+          ],
+          "dtype": "float32"
+        },
+        "step0_encoder_hidden_states.npy": {
+          "shape": [
+            2,
+            257,
+            1024
+          ],
+          "dtype": "float32"
+        },
+        "step0_latent_model_input.npy": {
+          "shape": [
+            2,
+            2048,
+            64
+          ],
+          "dtype": "float32"
+        },
+        "step0_noise_pred.npy": {
+          "shape": [
+            2,
+            2048,
+            64
+          ],
+          "dtype": "float32"
+        },
+        "step0_timestep.npy": {
+          "shape": [
+            2
+          ],
+          "dtype": "float32"
+        }
+      },
+      "display_present": true,
+      "display_hashed": false,
+      "baseline_decimation": {
+        "chamfer": 0.014009545372015719,
+        "chamfer_over_diag": 0.004596788175171702,
+        "precision": 0.97165,
+        "recall": 0.9727,
+        "f_score": 0.9721747164862293,
+        "tau": 0.03047681302280679,
+        "diag": 3.047681302280679,
+        "tau_frac": 0.01,
+        "samples": 20000,
+        "seed": 0,
+        "seed_ref": 0,
+        "volume": {
+          "iou": 0.9992829979760576,
+          "method": "surface_fill",
+          "watertight": {
+            "candidate": false,
+            "ref": false
+          },
+          "grid": 64,
+          "intersection_voxels": 110102,
+          "union_voxels": 110181
+        },
+        "verts_faces": {
+          "candidate": [
+            39952,
+            79999
+          ],
+          "ref": [
+            1474552,
+            2948944
+          ]
+        },
+        "gate": {
+          "pass": true,
+          "reasons": []
+        }
+      },
+      "baseline_sampling": {
+        "chamfer": 0.014047636440965716,
+        "chamfer_over_diag": 0.004609086052203252,
+        "precision": 0.9735,
+        "recall": 0.9742,
+        "f_score": 0.9738498742106073,
+        "tau": 0.03047813879337448,
+        "diag": 3.047813879337448,
+        "tau_frac": 0.01,
+        "samples": 20000,
+        "seed": 0,
+        "seed_ref": 1,
+        "volume": {
+          "iou": 1.0,
+          "method": "identical (not recomputed)",
+          "watertight": {
+            "candidate": false,
+            "ref": false
+          },
+          "grid": 64,
+          "intersection_voxels": null,
+          "union_voxels": null
+        },
+        "verts_faces": {
+          "candidate": [
+            1474552,
+            2948944
+          ],
+          "ref": [
+            1474552,
+            2948944
+          ]
+        },
+        "gate": {
+          "pass": true,
+          "reasons": []
+        }
+      },
+      "pass": true
+    },
+    "uegvsd": {
+      "sha256": {
+        "dinov2_last_hidden_state.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "770225efc040304f645311abdc8f856f22164470febf8ce17a93d9ca542be716",
+          "actual": "770225efc040304f645311abdc8f856f22164470febf8ce17a93d9ca542be716"
+        },
+        "dinov2_pixel_values.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "97f3faaa7c65f96746504fb9739a7023258624f9381c206c5b253051cead3c89",
+          "actual": "97f3faaa7c65f96746504fb9739a7023258624f9381c206c5b253051cead3c89"
+        },
+        "final_latents.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "5bff5d1c97a660f884c32fb6e0ef7ed412932019cf5db750e3ff98076c690d69",
+          "actual": "5bff5d1c97a660f884c32fb6e0ef7ed412932019cf5db750e3ff98076c690d69"
+        },
+        "input_rgba.png": {
+          "ok": true,
+          "missing": false,
+          "expected": "3f96f07cbb324c9c8cd84662e611f93d0d12e7787edb06f28a3d7dc610ba9de3",
+          "actual": "3f96f07cbb324c9c8cd84662e611f93d0d12e7787edb06f28a3d7dc610ba9de3"
+        },
+        "mesh.glb": {
+          "ok": true,
+          "missing": false,
+          "expected": "43c4c6416bfc5c1c836234461880b2fe625acb6a533383b5158369b1b4d58167",
+          "actual": "43c4c6416bfc5c1c836234461880b2fe625acb6a533383b5158369b1b4d58167"
+        },
+        "prepared_input.png": {
+          "ok": true,
+          "missing": false,
+          "expected": "0d6a5f893907264c2a783b31afe567c041b2e0c661d1d9e0a30cb91b6328cfb0",
+          "actual": "0d6a5f893907264c2a783b31afe567c041b2e0c661d1d9e0a30cb91b6328cfb0"
+        },
+        "step0_encoder_hidden_states.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "7c99c5dfcd536ea992c13247c8ab794e1f76d2eeabe88a2969e3639a0246c452",
+          "actual": "7c99c5dfcd536ea992c13247c8ab794e1f76d2eeabe88a2969e3639a0246c452"
+        },
+        "step0_latent_model_input.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "240de702530389bf56f2acba8b07df648dbbb75e278bea790cb1b4769618c4b1",
+          "actual": "240de702530389bf56f2acba8b07df648dbbb75e278bea790cb1b4769618c4b1"
+        },
+        "step0_noise_pred.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "85e2338df08ceec2c1022af3378883e88d9b34ca4036b69fe02b3dbaf61dc6ca",
+          "actual": "85e2338df08ceec2c1022af3378883e88d9b34ca4036b69fe02b3dbaf61dc6ca"
+        },
+        "step0_timestep.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "6659b47125e4c26a1c7f63796d8e309d3bb7a8d4e6de1a853f4a2407055318e6",
+          "actual": "6659b47125e4c26a1c7f63796d8e309d3bb7a8d4e6de1a853f4a2407055318e6"
+        }
+      },
+      "sha_ok": [
+        10,
+        10
+      ],
+      "shapes": {
+        "dinov2_last_hidden_state.npy": {
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "float32"
+        },
+        "dinov2_pixel_values.npy": {
+          "shape": [
+            1,
+            3,
+            224,
+            224
+          ],
+          "dtype": "float32"
+        },
+        "final_latents.npy": {
+          "shape": [
+            1,
+            2048,
+            64
+          ],
+          "dtype": "float32"
+        },
+        "step0_encoder_hidden_states.npy": {
+          "shape": [
+            2,
+            257,
+            1024
+          ],
+          "dtype": "float32"
+        },
+        "step0_latent_model_input.npy": {
+          "shape": [
+            2,
+            2048,
+            64
+          ],
+          "dtype": "float32"
+        },
+        "step0_noise_pred.npy": {
+          "shape": [
+            2,
+            2048,
+            64
+          ],
+          "dtype": "float32"
+        },
+        "step0_timestep.npy": {
+          "shape": [
+            2
+          ],
+          "dtype": "float32"
+        }
+      },
+      "display_present": true,
+      "display_hashed": false,
+      "baseline_decimation": {
+        "chamfer": 0.010322454010501862,
+        "chamfer_over_diag": 0.003706457577058258,
+        "precision": 0.99745,
+        "recall": 0.9976,
+        "f_score": 0.9975249943610436,
+        "tau": 0.027849918138533207,
+        "diag": 2.7849918138533205,
+        "tau_frac": 0.01,
+        "samples": 20000,
+        "seed": 0,
+        "seed_ref": 0,
+        "volume": {
+          "iou": 0.9992562598132386,
+          "method": "ray_parity",
+          "watertight": {
+            "candidate": true,
+            "ref": true
+          },
+          "grid": 64,
+          "intersection_voxels": 72552,
+          "union_voxels": 72606
+        },
+        "verts_faces": {
+          "candidate": [
+            39992,
+            80000
+          ],
+          "ref": [
+            821658,
+            1643304
+          ]
+        },
+        "gate": {
+          "pass": true,
+          "reasons": []
+        }
+      },
+      "baseline_sampling": {
+        "chamfer": 0.010357625643948572,
+        "chamfer_over_diag": 0.0037158978709154055,
+        "precision": 0.99725,
+        "recall": 0.99665,
+        "f_score": 0.9969499097246601,
+        "tau": 0.02787381678333637,
+        "diag": 2.787381678333637,
+        "tau_frac": 0.01,
+        "samples": 20000,
+        "seed": 0,
+        "seed_ref": 1,
+        "volume": {
+          "iou": 1.0,
+          "method": "identical (not recomputed)",
+          "watertight": {
+            "candidate": true,
+            "ref": true
+          },
+          "grid": 64,
+          "intersection_voxels": null,
+          "union_voxels": null
+        },
+        "verts_faces": {
+          "candidate": [
+            821658,
+            1643304
+          ],
+          "ref": [
+            821658,
+            1643304
+          ]
+        },
+        "gate": {
+          "pass": true,
+          "reasons": []
+        }
+      },
+      "pass": true
+    },
+    "yuyyuw": {
+      "sha256": {
+        "dinov2_last_hidden_state.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "13c49d02214b5c1d85d29ac4c43a1e5ba86ed07ffdefececf61a0f9ac1ed902c",
+          "actual": "13c49d02214b5c1d85d29ac4c43a1e5ba86ed07ffdefececf61a0f9ac1ed902c"
+        },
+        "dinov2_pixel_values.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "d17b10c8e711506ceb3ef2a534cc40f00ce45d507a6dcc88343873742e5d479e",
+          "actual": "d17b10c8e711506ceb3ef2a534cc40f00ce45d507a6dcc88343873742e5d479e"
+        },
+        "final_latents.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "bfc73268e7d6e938a77f9e915bc2e28d38378e68bd9325cc19b4bcf044410cc7",
+          "actual": "bfc73268e7d6e938a77f9e915bc2e28d38378e68bd9325cc19b4bcf044410cc7"
+        },
+        "input_rgba.png": {
+          "ok": true,
+          "missing": false,
+          "expected": "28aa465d1878179dd3a4a43abec683e217ed6cdcb51f6fcb92bcf0161226bce7",
+          "actual": "28aa465d1878179dd3a4a43abec683e217ed6cdcb51f6fcb92bcf0161226bce7"
+        },
+        "mesh.glb": {
+          "ok": true,
+          "missing": false,
+          "expected": "a84cd826dfadd569335f8507e8c26880bd30808b8ea23958172e0555feaf0c16",
+          "actual": "a84cd826dfadd569335f8507e8c26880bd30808b8ea23958172e0555feaf0c16"
+        },
+        "prepared_input.png": {
+          "ok": true,
+          "missing": false,
+          "expected": "7ebf43894dceba89958564901601f618d581302b8eb9fbbb1a175017a80b18ee",
+          "actual": "7ebf43894dceba89958564901601f618d581302b8eb9fbbb1a175017a80b18ee"
+        },
+        "step0_encoder_hidden_states.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "7b82a053fe1a378786c80066d3846f79dadf4c5091f3ff21dbfac4d4205119f4",
+          "actual": "7b82a053fe1a378786c80066d3846f79dadf4c5091f3ff21dbfac4d4205119f4"
+        },
+        "step0_latent_model_input.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "df32e73fa6a487d3a7802fb73b20682fcb3d9e5f030a41ff1c67af5ff4e775b3",
+          "actual": "df32e73fa6a487d3a7802fb73b20682fcb3d9e5f030a41ff1c67af5ff4e775b3"
+        },
+        "step0_noise_pred.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "d1591f986d6540c7d71f72e426f5c28ef7a74453b6e28d130c1b451b2e89d661",
+          "actual": "d1591f986d6540c7d71f72e426f5c28ef7a74453b6e28d130c1b451b2e89d661"
+        },
+        "step0_timestep.npy": {
+          "ok": true,
+          "missing": false,
+          "expected": "6659b47125e4c26a1c7f63796d8e309d3bb7a8d4e6de1a853f4a2407055318e6",
+          "actual": "6659b47125e4c26a1c7f63796d8e309d3bb7a8d4e6de1a853f4a2407055318e6"
+        }
+      },
+      "sha_ok": [
+        10,
+        10
+      ],
+      "shapes": {
+        "dinov2_last_hidden_state.npy": {
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "float32"
+        },
+        "dinov2_pixel_values.npy": {
+          "shape": [
+            1,
+            3,
+            224,
+            224
+          ],
+          "dtype": "float32"
+        },
+        "final_latents.npy": {
+          "shape": [
+            1,
+            2048,
+            64
+          ],
+          "dtype": "float32"
+        },
+        "step0_encoder_hidden_states.npy": {
+          "shape": [
+            2,
+            257,
+            1024
+          ],
+          "dtype": "float32"
+        },
+        "step0_latent_model_input.npy": {
+          "shape": [
+            2,
+            2048,
+            64
+          ],
+          "dtype": "float32"
+        },
+        "step0_noise_pred.npy": {
+          "shape": [
+            2,
+            2048,
+            64
+          ],
+          "dtype": "float32"
+        },
+        "step0_timestep.npy": {
+          "shape": [
+            2
+          ],
+          "dtype": "float32"
+        }
+      },
+      "display_present": true,
+      "display_hashed": false,
+      "baseline_decimation": {
+        "chamfer": 0.011461348431359392,
+        "chamfer_over_diag": 0.004092314724265647,
+        "precision": 0.99095,
+        "recall": 0.99175,
+        "f_score": 0.991349838603924,
+        "tau": 0.02800700631209662,
+        "diag": 2.800700631209662,
+        "tau_frac": 0.01,
+        "samples": 20000,
+        "seed": 0,
+        "seed_ref": 0,
+        "volume": {
+          "iou": 0.9985619505180247,
+          "method": "surface_fill",
+          "watertight": {
+            "candidate": false,
+            "ref": true
+          },
+          "grid": 64,
+          "intersection_voxels": 122212,
+          "union_voxels": 122388
+        },
+        "verts_faces": {
+          "candidate": [
+            39988,
+            80000
+          ],
+          "ref": [
+            1009468,
+            2018952
+          ]
+        },
+        "gate": {
+          "pass": true,
+          "reasons": []
+        }
+      },
+      "baseline_sampling": {
+        "chamfer": 0.011481062844329846,
+        "chamfer_over_diag": 0.0040982919841334375,
+        "precision": 0.99255,
+        "recall": 0.99115,
+        "f_score": 0.9918495059736855,
+        "tau": 0.02801426274354988,
+        "diag": 2.801426274354988,
+        "tau_frac": 0.01,
+        "samples": 20000,
+        "seed": 0,
+        "seed_ref": 1,
+        "volume": {
+          "iou": 1.0,
+          "method": "identical (not recomputed)",
+          "watertight": {
+            "candidate": true,
+            "ref": true
+          },
+          "grid": 64,
+          "intersection_voxels": null,
+          "union_voxels": null
+        },
+        "verts_faces": {
+          "candidate": [
+            1009468,
+            2018952
+          ],
+          "ref": [
+            1009468,
+            2018952
+          ]
+        },
+        "gate": {
+          "pass": true,
+          "reasons": []
+        }
+      },
+      "pass": true
+    }
+  },
+  "candidate_dir": "/home/lucas/Downloads/meta-ai-hackathon/ml/triposg-mobile/logs/spike/phone_pipeline_s25_d8",
+  "candidates": {
+    "hjswed": {
+      "final_latents.npy": {
+        "check": "tensor:final_latents",
+        "pass": false,
+        "detail": "rel_l2=2.939e-01 cosine=0.9561776 (cosine=9.562e-01 violates min >=0.99; rel_l2=2.939e-01 violates max <=0.05)",
+        "result": {
+          "shape": [
+            1,
+            2048,
+            64
+          ],
+          "whole": {
+            "max_abs": 4.258262872695923,
+            "mean_abs": 0.11352780346923445,
+            "rel_l2": 0.293859422607727,
+            "cosine": 0.9561775745435956,
+            "finite": true
+          },
+          "rows": [
+            {
+              "max_abs": 4.258262872695923,
+              "mean_abs": 0.11352780346923445,
+              "rel_l2": 0.293859422607727,
+              "cosine": 0.9561775745435956,
+              "finite": true
+            }
+          ]
+        }
+      },
+      "mesh.glb": {
+        "check": "mesh",
+        "pass": true,
+        "detail": "chamfer/diag=4.265e-03 F=0.978 IoU=0.9662",
+        "result": {
+          "chamfer": 0.011355407641838546,
+          "chamfer_over_diag": 0.004265452175159914,
+          "precision": 0.98105,
+          "recall": 0.9758,
+          "f_score": 0.9784179574315865,
+          "tau": 0.026621814465456587,
+          "diag": 2.6621814465456586,
+          "tau_frac": 0.01,
+          "samples": 20000,
+          "seed": 0,
+          "seed_ref": 0,
+          "volume": {
+            "iou": 0.9662312028162708,
+            "method": "surface_fill",
+            "watertight": {
+              "candidate": true,
+              "ref": false
+            },
+            "grid": 64,
+            "intersection_voxels": 94967,
+            "union_voxels": 98286
+          },
+          "verts_faces": {
+            "candidate": [
+              520768,
+              1041540
+            ],
+            "ref": [
+              661075,
+              1322148
+            ]
+          }
+        }
+      }
+    },
+    "iuvbww": {
+      "final_latents.npy": {
+        "check": "tensor:final_latents",
+        "pass": false,
+        "detail": "rel_l2=3.362e-01 cosine=0.9425631 (cosine=9.426e-01 violates min >=0.99; rel_l2=3.362e-01 violates max <=0.05)",
+        "result": {
+          "shape": [
+            1,
+            2048,
+            64
+          ],
+          "whole": {
+            "max_abs": 3.530282139778137,
+            "mean_abs": 0.1418556948084727,
+            "rel_l2": 0.33620350725270937,
+            "cosine": 0.9425631451009359,
+            "finite": true
+          },
+          "rows": [
+            {
+              "max_abs": 3.530282139778137,
+              "mean_abs": 0.1418556948084727,
+              "rel_l2": 0.33620350725270937,
+              "cosine": 0.9425631451009359,
+              "finite": true
+            }
+          ]
+        }
+      },
+      "mesh.glb": {
+        "check": "mesh",
+        "pass": false,
+        "detail": "chamfer/diag=6.078e-03 F=0.893 IoU=0.9596 (F=0.893 below 0.9)",
+        "result": {
+          "chamfer": 0.01608263280415012,
+          "chamfer_over_diag": 0.006077998368703139,
+          "precision": 0.9002,
+          "recall": 0.88675,
+          "f_score": 0.8934243823274295,
+          "tau": 0.026460409872702335,
+          "diag": 2.6460409872702333,
+          "tau_frac": 0.01,
+          "samples": 20000,
+          "seed": 0,
+          "seed_ref": 0,
+          "volume": {
+            "iou": 0.9595900660342389,
+            "method": "surface_fill",
+            "watertight": {
+              "candidate": false,
+              "ref": true
+            },
+            "grid": 64,
+            "intersection_voxels": 139795,
+            "union_voxels": 145682
+          },
+          "verts_faces": {
+            "candidate": [
+              642413,
+              1284892
+            ],
+            "ref": [
+              805278,
+              1610556
+            ]
+          }
+        }
+      }
+    },
+    "qwvfsd": {
+      "final_latents.npy": {
+        "check": "tensor:final_latents",
+        "pass": false,
+        "detail": "rel_l2=3.179e-01 cosine=0.9487016 (cosine=9.487e-01 violates min >=0.99; rel_l2=3.179e-01 violates max <=0.05)",
+        "result": {
+          "shape": [
+            1,
+            2048,
+            64
+          ],
+          "whole": {
+            "max_abs": 3.9256527423858643,
+            "mean_abs": 0.12778913753580143,
+            "rel_l2": 0.31788294763076436,
+            "cosine": 0.9487015847502187,
+            "finite": true
+          },
+          "rows": [
+            {
+              "max_abs": 3.9256527423858643,
+              "mean_abs": 0.12778913753580143,
+              "rel_l2": 0.31788294763076436,
+              "cosine": 0.9487015847502187,
+              "finite": true
+            }
+          ]
+        }
+      },
+      "mesh.glb": {
+        "check": "mesh",
+        "pass": false,
+        "detail": "chamfer/diag=5.701e-03 F=0.910 IoU=0.9475 (IoU=0.9475 below 0.95)",
+        "result": {
+          "chamfer": 0.017374402949281647,
+          "chamfer_over_diag": 0.005700859514503638,
+          "precision": 0.9075,
+          "recall": 0.91225,
+          "f_score": 0.9098688006594312,
+          "tau": 0.03047681302280679,
+          "diag": 3.047681302280679,
+          "tau_frac": 0.01,
+          "samples": 20000,
+          "seed": 0,
+          "seed_ref": 0,
+          "volume": {
+            "iou": 0.9474781748135581,
+            "method": "surface_fill",
+            "watertight": {
+              "candidate": false,
+              "ref": false
+            },
+            "grid": 64,
+            "intersection_voxels": 107228,
+            "union_voxels": 113172
+          },
+          "verts_faces": {
+            "candidate": [
+              1201238,
+              2402368
+            ],
+            "ref": [
+              1474552,
+              2948944
+            ]
+          }
+        }
+      }
+    },
+    "uegvsd": {
+      "final_latents.npy": {
+        "check": "tensor:final_latents",
+        "pass": false,
+        "detail": "rel_l2=3.288e-01 cosine=0.9450781 (cosine=9.451e-01 violates min >=0.99; rel_l2=3.288e-01 violates max <=0.05)",
+        "result": {
+          "shape": [
+            1,
+            2048,
+            64
+          ],
+          "whole": {
+            "max_abs": 3.392723798751831,
+            "mean_abs": 0.13606541926775112,
+            "rel_l2": 0.3288454910850905,
+            "cosine": 0.9450780663729758,
+            "finite": true
+          },
+          "rows": [
+            {
+              "max_abs": 3.392723798751831,
+              "mean_abs": 0.13606541926775112,
+              "rel_l2": 0.3288454910850905,
+              "cosine": 0.9450780663729758,
+              "finite": true
+            }
+          ]
+        }
+      },
+      "mesh.glb": {
+        "check": "mesh",
+        "pass": false,
+        "detail": "chamfer/diag=6.355e-03 F=0.848 IoU=0.8793 (F=0.848 below 0.9; IoU=0.8793 below 0.95)",
+        "result": {
+          "chamfer": 0.017697601624217733,
+          "chamfer_over_diag": 0.00635463326541391,
+          "precision": 0.82395,
+          "recall": 0.8725,
+          "f_score": 0.8475302838279938,
+          "tau": 0.027849918138533207,
+          "diag": 2.7849918138533205,
+          "tau_frac": 0.01,
+          "samples": 20000,
+          "seed": 0,
+          "seed_ref": 0,
+          "volume": {
+            "iou": 0.8792559815585173,
+            "method": "ray_parity",
+            "watertight": {
+              "candidate": true,
+              "ref": true
+            },
+            "grid": 64,
+            "intersection_voxels": 66368,
+            "union_voxels": 75482
+          },
+          "verts_faces": {
+            "candidate": [
+              600608,
+              1201332
+            ],
+            "ref": [
+              821658,
+              1643304
+            ]
+          }
+        }
+      }
+    },
+    "yuyyuw": {
+      "final_latents.npy": {
+        "check": "tensor:final_latents",
+        "pass": false,
+        "detail": "rel_l2=2.507e-01 cosine=0.9681712 (cosine=9.682e-01 violates min >=0.99; rel_l2=2.507e-01 violates max <=0.05)",
+        "result": {
+          "shape": [
+            1,
+            2048,
+            64
+          ],
+          "whole": {
+            "max_abs": 3.659421920776367,
+            "mean_abs": 0.09206567880481094,
+            "rel_l2": 0.25068689378741993,
+            "cosine": 0.9681712457391038,
+            "finite": true
+          },
+          "rows": [
+            {
+              "max_abs": 3.659421920776367,
+              "mean_abs": 0.09206567880481094,
+              "rel_l2": 0.25068689378741993,
+              "cosine": 0.9681712457391038,
+              "finite": true
+            }
+          ]
+        }
+      },
+      "mesh.glb": {
+        "check": "mesh",
+        "pass": true,
+        "detail": "chamfer/diag=4.704e-03 F=0.978 IoU=0.9771",
+        "result": {
+          "chamfer": 0.01317517373613482,
+          "chamfer_over_diag": 0.004704242070472301,
+          "precision": 0.9791,
+          "recall": 0.97665,
+          "f_score": 0.9778734654224721,
+          "tau": 0.02800700631209662,
+          "diag": 2.800700631209662,
+          "tau_frac": 0.01,
+          "samples": 20000,
+          "seed": 0,
+          "seed_ref": 0,
+          "volume": {
+            "iou": 0.9770502158121908,
+            "method": "surface_fill",
+            "watertight": {
+              "candidate": false,
+              "ref": true
+            },
+            "grid": 64,
+            "intersection_voxels": 120653,
+            "union_voxels": 123487
+          },
+          "verts_faces": {
+            "candidate": [
+              791293,
+              1582668
+            ],
+            "ref": [
+              1009468,
+              2018952
+            ]
+          }
+        }
+      }
+    }
+  },
+  "pass": false
+}

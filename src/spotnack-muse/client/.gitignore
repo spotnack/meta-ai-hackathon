@@ -41,7 +41,3 @@ example
 # generated native folders
 /ios
 /android
-
-# Demo-mode golden binaries (local-only; re-included for EAS via root .easignore)
-src/features/image-to-3d/infrastructure/demo-goldens/*/*.glb
-src/features/image-to-3d/infrastructure/demo-goldens/*/input_rgba.png

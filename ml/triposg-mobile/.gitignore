@@ -11,7 +11,13 @@ logs/
 *.pte
 *.mlmodelc/
 __pycache__/
+# Tensors and test fixtures (goldens_5 artifact rule above already covers
+# the reference set; this covers cpp/test/data/ and any scratch arrays).
+*.npy
 # Colab golden output: keep only the report in git.
 reference/goldens_5/*
 !reference/goldens_5/report.json
 reference/goldens_5.zip
+
+# Generated test fixtures (prep_preprocess_inputs.py, make_preprocess_refs.py, rembg CPU refs).
+cpp/test/data/

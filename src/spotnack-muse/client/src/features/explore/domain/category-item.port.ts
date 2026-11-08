@@ -13,6 +13,8 @@
  * @property {number} [bookmarkCount] - Mutated in place by the favourites feature.
  * @property {string|null} [generator] - Pipeline that produced the model, for generated items.
  * @property {string|null} [demoAttribution] - Honest cloud-GPU label for demo assets; null otherwise.
+ * @property {string|null} [previewImage] - Still image of the model, shown when the card cannot render it live.
+ * @property {string|null} [previewSnapshotUri] - Where the card saves a still after the model's first live render (own creations without one yet).
  */
 
 export {};

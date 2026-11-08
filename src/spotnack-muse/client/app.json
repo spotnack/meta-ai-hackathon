@@ -23,6 +23,7 @@
     },
     "plugins": [
       "expo-router",
+      "./modules/triposg/app.plugin.js",
       [
         "expo-image-picker",
         {
@@ -44,7 +45,9 @@
         {
           "android": {
             "enableMinifyInReleaseBuilds": false,
-            "enableShrinkResourcesInReleaseBuilds": false
+            "enableShrinkResourcesInReleaseBuilds": false,
+            "useLegacyPackaging": true,
+            "buildArchs": ["arm64-v8a"]
           }
         }
       ]

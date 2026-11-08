@@ -1,6 +1,7 @@
-import { StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import styled from "styled-components/native";
 
+import { ThemedText } from "@/shared/theme/themed-text";
 import { ThemedView } from "@/shared/theme/themed-view";
 import { Spacing } from "@/shared/theme/theme";
 
@@ -30,16 +31,15 @@ export const NameFooter = styled.View`
   padding-vertical: ${Spacing.three}px;
 `;
 
-const STAGE_BACKGROUND = "#39363b";
+export const STAGE_BACKGROUND = "#39363b";
 
-export const stageStyles = StyleSheet.create({
-  nameText: { color: "#fff" },
-  safeArea: { flex: 1 },
-  canvas: { flex: 1 },
-  background: STAGE_BACKGROUND,
-  // Fills the canvas area when the item has no renderable model.
-  placeholder: { height: "100%", backgroundColor: STAGE_BACKGROUND },
-});
+export const SafeArea = styled(SafeAreaView)`
+  flex: 1;
+`;
+
+export const NameText = styled(ThemedText).attrs({ type: "subtitle" })`
+  color: #fff;
+`;
 
 export const BACK_ICON_COLOR = "#fff";
 export const BACK_ICON_SIZE = 24;

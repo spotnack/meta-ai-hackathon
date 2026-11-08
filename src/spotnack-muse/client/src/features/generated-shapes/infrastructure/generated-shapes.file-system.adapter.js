@@ -26,7 +26,8 @@ Each shape owns one directory, so deleting a shape removes its model, source ima
   └── <SHA-256 of the owner's user id>/   # Hashed: the id comes from the server, the hash is always a safe path segment.
       └── <id>/
           ├── source.<ext>             # Copy of the image the shape was generated from.
-          ├── model.<ext>              # The 3D model: model.placeholder.json today, model.glb once the AI pipeline lands.
+          ├── model.<ext>              # The 3D model: model.glb (on-device TripoSG) or model.placeholder.json.
+          ├── preview.png              # Optional still of the model, saved by Explore after its first live render.
           └── metadata.json            # Written last. A directory without it is an interrupted write and is skipped.
 
 metadata.json stores file names, never absolute URIs: iOS moves the app container on every update/reinstall,
@@ -36,6 +37,7 @@ so URIs are resolved against the current documents directory on each read.
 const ROOT_DIRECTORY_NAME = "generated-assets";
 const USERS_DIRECTORY_NAME = "users";
 const METADATA_FILE_NAME = "metadata.json";
+const PREVIEW_FILE_NAME = "preview.png";
 const METADATA_SCHEMA_VERSION = 1;
 const SOURCE_IMAGE_BASE_NAME = "source";
 const MODEL_BASE_NAME = "model";
@@ -84,6 +86,7 @@ const resolveExistingFileUri = (directory, fileName) => {
 // instead of dropping the shape, so the user can still see and delete it.
 const toGeneratedShape = (directory, metadata, ownerId) => {
   const modelUri = resolveExistingFileUri(directory, metadata.modelFile);
+  const previewFile = new File(directory, PREVIEW_FILE_NAME);
   return {
     ...DEFAULT_GENERATED_SHAPE_FIELDS,
     id: directory.name,
@@ -94,6 +97,12 @@ const toGeneratedShape = (directory, metadata, ownerId) => {
     createdAt: metadata.createdAt,
     generator: metadata.generator ?? null,
     model: modelUri ? { uri: modelUri, format: metadata.modelFormat } : null,
+    // Still saved by the Explore card after the first live render; lives
+    // in the shape directory, so deleting the shape deletes it too.
+    preview: {
+      uri: previewFile.exists ? previewFile.uri : null,
+      saveUri: previewFile.uri,
+    },
   };
 };
 

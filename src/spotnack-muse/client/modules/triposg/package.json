@@ -1,0 +1,7 @@
+{
+  "name": "@spotnack/triposg",
+  "version": "1.0.0",
+  "description": "On-device TripoSG image-to-3D Expo module (Android SM8750 NPU; iOS reports unsupported).",
+  "main": "index.js",
+  "private": true
+}

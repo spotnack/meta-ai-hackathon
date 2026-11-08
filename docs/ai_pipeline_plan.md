@@ -16,7 +16,7 @@ What: read the TripoSG repo, configs, and weights from source; confirm/correct e
 
 Files you will create or change:
 
-- Create: audit content inside `docs/ai_pipeline.md` (§Audit only).
+- Create: audit content inside `docs/ai_pipeline_logs.md` (§Audit only).
 - Create: `ml/triposg-mobile/README.md` (tooling folder stub + ignore rules so weights/logs stay out of git and out of Metro's watch tree).
 - Create: `ml/triposg-mobile/audit/` notes/scripts/logs backing each measured/documented/unverified claim.
 - Change: this plan file (`docs/ai_pipeline_plan.md`) only to record the go/no-go outcome if it changes sequencing.
@@ -28,7 +28,7 @@ Checkpoint: commit audit, then stop and wait for maintainer review before Phase 
 
 ## Phase 1 — Desktop reference and golden data
 
-What: run official TripoSG PyTorch FP32 on a fixed ≥20-image license-compatible eval set (fixed seeds); save golden tensors at each component boundary + final meshes; write the parity harness (max abs/relative error per component; Chamfer, F-score@stated-threshold, volume IoU vs. reference mesh; rendered views); set and justify acceptance thresholds before optimizing.
+What: run official TripoSG PyTorch FP32 on a fixed 5-image license-compatible eval set (fixed seeds; reduced from 20 on 2026-11-06 — the eval set size only bounds parity confidence, it does not change on-device model speed or output quality); save golden tensors at each component boundary + final meshes; write the parity harness (max abs/relative error per component; Chamfer, F-score@stated-threshold, volume IoU vs. reference mesh; rendered views); set and justify acceptance thresholds before optimizing.
 
 Files you will create or change:
 
@@ -38,7 +38,7 @@ Files you will create or change:
 - Create: `ml/triposg-mobile/logs/phase1/` raw logs.
 - Change: `ml/triposg-mobile/README.md` (one-command setup/run).
 - Change: `src/spotnack-muse/environment.yml` (pin any new conversion deps) or a documented dedicated env file.
-- Change: `docs/ai_pipeline.md` (reference + parity method).
+- Change: `docs/ai_pipeline_logs.md` (reference + parity method).
 
 Validation: one documented command reproduces reference + parity; thresholds fixed before any optimization; `black`, `flake8` pass.
 
@@ -51,7 +51,7 @@ Files you will create or change:
 - Create: `ml/triposg-mobile/conversion/` per-runtime conversion scripts.
 - Create: `ml/triposg-mobile/bench/` on-device benchmark scripts + `ml/triposg-mobile/logs/phase2/` raw logs (device, OS, SoC, RAM, runtime version, precision, steps, commit hash; 2 warm-ups + ≥5 runs, median+p90, thermal state, `phys_footprint`/`VmHWM`/`dumpsys meminfo`).
 - Create: `ml/triposg-mobile/eval/matrix.md` + `summary.md` (measured / documented(link) / not-supported(evidence) / not-evaluated(reason); no estimates as measurements).
-- Change: `docs/ai_pipeline.md` (decision + evidence).
+- Change: `docs/ai_pipeline_logs.md` (decision + evidence).
 - Change: `docs/architecture.md` file tree for new tooling files.
 
 Validation: release builds on the named physical devices (simulators/emulators functional-only, never perf); tables fully filled with committed scripts+logs.
@@ -70,7 +70,7 @@ Files you will create or change:
 - Create: `src/spotnack-muse/client/src/features/image-to-3d/domain/model-management.port.js` + `infrastructure/model-management.adapter.js` (manifest, resumable checksum-verified download, free-space + cellular warning, restart-resume, upgrade/corrupt/delete).
 - Change: `src/spotnack-muse/client/src/features/image-to-3d/presentation/components/image-to-3d-card/` (download progress/delete UI in existing style).
 - Change: `src/spotnack-muse/client/app.json` (module plugin), `src/spotnack-muse/client/package.json` (scripts/deps via `npx expo install`), `src/spotnack-muse/client/src/config/api.js` (new `EXPO_PUBLIC_*` weight base URL following existing pattern).
-- Change: `docs/ai_pipeline.md` (arch + model management), `docs/architecture.md` (every new file), `ml/triposg-mobile/README.md` (native build steps).
+- Change: `docs/ai_pipeline_logs.md` (arch + model management), `docs/architecture.md` (every new file), `ml/triposg-mobile/README.md` (native build steps).
 
 Validation: `yarn lint`, `npx tsc --noEmit` (from `client/`), `black --check .`, `flake8 .`; every GLB passes Khronos glTF Validator (standard glTF, +Y up, meters, valid normals, indexed triangles, sensible default material; no Draco/meshopt unless decoders bundled); cancel verified per-stage bound; no temp files or native leaks.
 
@@ -83,7 +83,7 @@ Files you will create or change:
 - Change: `src/spotnack-muse/client/src/features/image-to-3d/application/use-image-to-3d-conversion.hook.js` (one-line swap; placeholder stays).
 - Change: `src/spotnack-muse/client/src/features/explore/presentation/components/explore-card/glb-model-viewer.component.jsx` only if local-file loading fix is needed.
 - Change: `README.md` (add missing `assets/ai_pipeline.png` or fix the link) + `assets/` diagram.
-- Change: `docs/ai_pipeline.md` (final config, benchmarks + methodology, limitations, licenses), `docs/architecture.md` (final tree).
+- Change: `docs/ai_pipeline_logs.md` (final config, benchmarks + methodology, limitations, licenses), `docs/architecture.md` (final tree).
 - No other product files.
 
 Validation (definition of done, `ai_pipeline_prompt.md` §10): airplane-mode conversion on the named iPhone + Android produces valid on-device TripoSG GLBs; outputs pass Phase 1 parity; Stop lands ≤1 sampling step (or documented per-stage bound) with no leftovers; below-tier devices get a clear preflight message with zero OOM kills; CI green or each failure explained; matrix + summary fully filled with scripts+logs committed.

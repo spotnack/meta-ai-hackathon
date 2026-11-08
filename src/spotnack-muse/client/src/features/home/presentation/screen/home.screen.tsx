@@ -1,7 +1,5 @@
 // View layer: imports JSX/TSX components.
 
-import { ScrollView } from "react-native";
-
 import { ThemedText } from "@/shared/theme/themed-text";
 import { SafeScreenContainer } from "@/shared/ui/safe-area/screen-container";
 import { useFitToViewport } from "@/hooks/use-fit-to-viewport";
@@ -12,7 +10,7 @@ import {
   CenterText,
   TitleContainer,
   ConverterContainer,
-  homeStyles,
+  HomeScrollView,
 } from "./home.screen.styles";
 
 import { AppLogo } from "@shared/ui/app-logo/app-logo.component";
@@ -41,10 +39,7 @@ export default function HomeScreen() {
   return (
     <SafeScreenContainer>
       <HomeScreenContainer>
-        <ScrollView
-          contentContainerStyle={homeStyles.scrollContent}
-          {...scrollViewProps}
-        >
+        <HomeScrollView {...scrollViewProps}>
           <TopMenuContainer>
             <AppLogo />
           </TopMenuContainer>
@@ -64,18 +59,30 @@ export default function HomeScreen() {
               isConverting={vm.isConverting}
               isCancelling={vm.isCancelling}
               canConvert={vm.canConvert}
-              canPickDemoImage={vm.canPickDemoImage}
+              cutout={vm.cutout}
+              cutoutWorking={vm.cutoutWorking}
+              highDetail={vm.highDetail}
+              setHighDetail={vm.setHighDetail}
               previewHeight={previewHeight}
               onPickImage={vm.pickImage}
-              onPickDemoImage={vm.pickDemoImage}
               onClearImage={vm.clearImage}
               onConvert={vm.convert}
               onCancelConversion={vm.cancelConversion}
               onViewResult={vm.viewResult}
               onOpenSettings={vm.openSettings}
+              modelState={vm.modelsVisible ? vm.modelState : null}
+              modelActionError={vm.modelsVisible ? vm.modelActionError : null}
+              modelActionNotice={vm.modelsVisible ? vm.modelActionNotice : null}
+              modelsWorking={vm.modelsWorking}
+              needsMeteredConfirm={vm.needsMeteredConfirm}
+              onDownloadModels={vm.onDownloadModels}
+              onPauseDownloadModels={vm.onPauseDownloadModels}
+              onVerifyModels={vm.onVerifyModels}
+              onDeleteModels={vm.onDeleteModels}
+              onDismissModelNotice={vm.onDismissModelNotice}
             />
           </ConverterContainer>
-        </ScrollView>
+        </HomeScrollView>
       </HomeScreenContainer>
     </SafeScreenContainer>
   );

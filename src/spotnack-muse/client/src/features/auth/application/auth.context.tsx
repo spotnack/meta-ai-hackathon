@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as WebBrowser from "expo-web-browser";
 import * as ExpoCrypto from "expo-crypto";
 
@@ -38,6 +39,9 @@ type AuthContextValue = AuthState & {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+// Local-only marker for the demo guest session (no tokens involved).
+const DEMO_SESSION_KEY = "@auth:demo-session";
 
 /**
  * Generates a cryptographically random RFC 7636 PKCE code verifier.
@@ -127,11 +131,14 @@ async function federatedSignIn(
  * @returns {React.JSX.Element} Auth context provider.
  */
 export function AuthContextProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>({
+  // Demo builds start "loading" until the persisted guest session is read
+  // (effect below), so the index redirect waits instead of racing to the
+  // auth screen.
+  const [state, setState] = useState<AuthState>(() => ({
     user: null,
     tokens: null,
-    isLoading: false,
-  });
+    isLoading: isDemoAuthMode(),
+  }));
 
   const setSession = ({ user, tokens }: AuthSession) => {
     setState({ user, tokens, isLoading: false });
@@ -185,6 +192,28 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
       return false;
     });
 
+  // A process restart wipes useState, so the demo guest session is kept
+  // in AsyncStorage (local only — the guest has no tokens to protect).
+  // Real (Cognito) sessions stay memory-only: persisting their tokens is
+  // a separate security decision, out of scope here.
+  useEffect(() => {
+    if (!isDemoAuthMode()) return;
+    AsyncStorage.getItem(DEMO_SESSION_KEY)
+      .then((json) => {
+        if (json === "demo-guest") {
+          setState({
+            user: { ...DEMO_GUEST_USER },
+            tokens: null,
+            isLoading: false,
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        setState((s) => (s.isLoading ? { ...s, isLoading: false } : s));
+      });
+  }, []);
+
   // Demo builds have no backend: create the local guest session with no
   // network calls, so the tabs let it through.
   const signInAsDemoGuest = () =>
@@ -193,6 +222,7 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
         throw new Error("Demo sign-in is not enabled in this build.");
       }
       setState({ user: { ...DEMO_GUEST_USER }, tokens: null, isLoading: false });
+      await AsyncStorage.setItem(DEMO_SESSION_KEY, "demo-guest");
     });
 
   const signOut = () =>
@@ -201,6 +231,7 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
       // Demo guest has no server session: just clear the local state.
       if (isDemoAuthMode() && provider === DEMO_GUEST_USER.provider) {
         setState({ user: null, tokens: null, isLoading: false });
+        await AsyncStorage.removeItem(DEMO_SESSION_KEY);
         return;
       }
       const result = await authApi.signOut(state.tokens?.refreshToken);

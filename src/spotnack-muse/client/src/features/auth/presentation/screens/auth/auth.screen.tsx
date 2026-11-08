@@ -1,4 +1,3 @@
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
 import { AnimatedLogo } from "@/shared/ui/animation/animated-logo";
@@ -7,6 +6,7 @@ import { isDemoAuthMode } from "@/features/auth/infrastructure/demo-auth.config"
 
 import {
   Container,
+  SafeArea,
   HeroSection,
   HeroText,
   ButtonGroup,
@@ -34,7 +34,7 @@ export default function AuthScreen() {
 
   return (
     <Container>
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeArea>
         <HeroSection>
           <AnimatedLogo />
           <HeroText>Where The Journey Begins</HeroText>
@@ -65,7 +65,7 @@ export default function AuthScreen() {
             ) : null}
           </ButtonGroup>
         </HeroSection>
-      </SafeAreaView>
+      </SafeArea>
     </Container>
   );
 }

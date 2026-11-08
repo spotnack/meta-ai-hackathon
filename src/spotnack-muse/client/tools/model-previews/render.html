@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Model previews</title>
+<script type="importmap">
+{ "imports": {
+  "three": "/node_modules/three/build/three.module.js",
+  "three/addons/": "/node_modules/three/examples/jsm/"
+} }
+</script>
+</head>
+<body style="margin:0;background:#242225">
+<script type="module">
+// Renders one still per GLB with the same scene as the app's Explore card
+// (GlbModelViewer / RotatingModel): camera [0, 0.5, 4] fov 30 looking at
+// the origin, ambient 0.6 + directional 1.6 at [3, 4, 5], ACES tone
+// mapping (React Three Fiber's default), background #242225, fit to
+// 1/maxDim with the card's 1.2/1.8/1.2 stretch and tilt [PI/5, 0, PI/12].
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+const params = new URLSearchParams(location.search);
+const WIDTH = Number(params.get("w") ?? 600);
+const HEIGHT = Number(params.get("h") ?? 420);
+// Spin angle of the still (the card spins around y).
+const SPIN = Number(params.get("spin") ?? 0.6);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(WIDTH, HEIGHT);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+const camera = new THREE.PerspectiveCamera(30, WIDTH / HEIGHT, 0.1, 1000);
+camera.position.set(0, 0.5, 4);
+camera.lookAt(0, 0, 0);
+
+const loader = new GLTFLoader();
+
+// Same as prepareUntexturedMeshes in glb-model-viewer.component.jsx.
+function prepareUntexturedMeshes(root) {
+  root.traverse((node) => {
+    if (!node.isMesh || node.geometry.getAttribute("normal")) return;
+    node.geometry.computeVertexNormals();
+    node.material = new THREE.MeshStandardMaterial({ color: "#d6d6d6", roughness: 0.85, metalness: 0 });
+  });
+}
+
+async function renderOne(glbPath) {
+  const gltf = await loader.loadAsync(glbPath);
+  const model = gltf.scene;
+  prepareUntexturedMeshes(model);
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color("#242225");
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+  sun.position.set(3, 4, 5);
+  scene.add(sun);
+
+  const box = new THREE.Box3().setFromObject(model);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const fit = 1 / Math.max(size.x, size.y, size.z);
+  const offset = new THREE.Group();
+  offset.position.set(-center.x, -center.y, -center.z);
+  offset.add(model);
+  const spin = new THREE.Group();
+  spin.scale.set(fit * 1.2, fit * 1.8, fit * 1.2);
+  spin.rotation.y = SPIN;
+  spin.add(offset);
+  const tilt = new THREE.Group();
+  tilt.rotation.set(Math.PI / 5, 0, Math.PI / 12);
+  tilt.add(spin);
+  scene.add(tilt);
+
+  renderer.render(scene, camera);
+  const blob = await new Promise((resolve) => renderer.domElement.toBlob(resolve, "image/png"));
+  return blob;
+}
+
+const jobs = await (await fetch("/jobs")).json();
+for (const job of jobs) {
+  try {
+    const blob = await renderOne(job.glb);
+    await fetch(`/save?out=${encodeURIComponent(job.out)}`, { method: "POST", body: blob });
+  } catch (err) {
+    await fetch(`/fail?glb=${encodeURIComponent(job.glb)}&error=${encodeURIComponent(String(err))}`, { method: "POST" });
+  }
+}
+await fetch("/done", { method: "POST" });
+</script>
+</body>
+</html>

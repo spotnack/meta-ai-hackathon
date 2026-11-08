@@ -1,4 +1,4 @@
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import styled from "styled-components/native";
@@ -31,9 +31,11 @@ export const Card = styled(ThemedView).attrs({ type: "backgroundElement" })`
 `;
 
 export const EmptyPicker = styled(TouchableOpacity)`
+  height: ${({ $height }) => $height}px;
   border-radius: ${INNER_RADIUS}px;
   border-width: 1.5px;
   border-style: dashed;
+  border-color: ${({ $borderColor }) => $borderColor};
   align-items: center;
   justify-content: center;
   gap: ${Spacing.one}px;
@@ -56,6 +58,7 @@ export const CenteredText = styled(ThemedText)`
 `;
 
 export const PreviewFrame = styled(View)`
+  height: ${({ $height }) => $height}px;
   border-radius: ${INNER_RADIUS}px;
   overflow: hidden;
   background-color: ${PREVIEW_BACKGROUND};
@@ -101,11 +104,25 @@ export const ImageSizeBadge = styled(View)`
   background-color: ${MEDIA_CHIP_BACKGROUND};
 `;
 
+// Same chip treatment, top-left: tags the preview as the cut-out canvas.
+export const CutoutBadge = styled(View)`
+  position: absolute;
+  left: ${Spacing.two}px;
+  top: ${Spacing.two}px;
+  padding: ${Spacing.half}px ${Spacing.two}px;
+  border-radius: ${Size.two}px;
+  background-color: ${MEDIA_CHIP_BACKGROUND};
+`;
+
 export const OnMediaText = styled(ThemedText).attrs({ type: "smallBold" })`
   color: ${ON_MEDIA_COLOR};
 `;
 
 export const ImageSizeText = styled(ThemedText).attrs({ type: "code" })`
+  color: ${ON_MEDIA_COLOR};
+`;
+
+export const CutoutBadgeText = styled(ThemedText).attrs({ type: "small" })`
   color: ${ON_MEDIA_COLOR};
 `;
 
@@ -135,6 +152,7 @@ export const ProgressFill = styled(LinearGradient).attrs({
   start: { x: 0, y: 0 },
   end: { x: 1, y: 0 },
 })`
+  width: ${({ $percent }) => $percent}%;
   height: 100%;
   border-radius: 3px;
 `;
@@ -145,25 +163,36 @@ export const InlineButton = styled(TouchableOpacity)`
   gap: ${Spacing.one}px;
 `;
 
+// Tinted background per tone: "error", "success", or none.
+const STATUS_ROW_TINTS = {
+  error: "rgba(255, 107, 107, 0.12)",
+  success: "rgba(62, 207, 142, 0.12)",
+};
+
 export const StatusRow = styled(View)`
   flex-direction: row;
   align-items: center;
   gap: ${Spacing.two}px;
   padding: ${Spacing.two}px ${COMPACT_SPACING}px;
   border-radius: ${INNER_RADIUS}px;
+  background-color: ${({ $tone }) => STATUS_ROW_TINTS[$tone] ?? "transparent"};
 `;
 
+// $isError: red text for error rows.
 export const StatusText = styled(ThemedText).attrs({ type: "small" })`
   flex: 1;
+  ${({ $isError }) => ($isError ? `color: ${ERROR_COLOR};` : "")}
 `;
 
+// $color overrides the link color (e.g. green for "Verified").
 export const LinkText = styled(ThemedText).attrs({ type: "smallBold" })`
-  color: ${LINK_COLOR};
+  color: ${({ $color }) => $color ?? LINK_COLOR};
 `;
 
 // Gradient-bordered pill: same treatment as the sign-in screen's primary action.
 export const ConvertButton = styled(TouchableOpacity)`
   width: 100%;
+  opacity: ${({ $dimmed }) => ($dimmed ? 0.4 : 1)};
 `;
 
 export const ConvertGradientBorder = styled(LinearGradient).attrs({
@@ -191,8 +220,3 @@ export const ConvertButtonText = styled(ThemedText)`
   font-weight: 700;
 `;
 
-export const cardStyles = StyleSheet.create({
-  disabled: { opacity: 0.4 },
-  errorRow: { backgroundColor: "rgba(255, 107, 107, 0.12)" },
-  successRow: { backgroundColor: "rgba(62, 207, 142, 0.12)" },
-});

@@ -1,0 +1,2104 @@
+{
+  "meta": {
+    "device": "Samsung Galaxy S25 (Family)",
+    "target_runtime": "precompiled_qnn_onnx",
+    "qairt_version": "2.50",
+    "compile_options": "--target_runtime precompiled_qnn_onnx --qairt_version 2.50"
+  },
+  "units": {
+    "head": {
+      "stem": "head",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_head_fp32.onnx",
+      "source_data_bytes": 134791168,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/head/dit_head_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "jp442eo1p",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/head/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/head/device/model.bin",
+      "bin_bytes": 68035936,
+      "bin_sha256": "bb5351216183b246ce7d930193d838c433a19c93b400f3aa4ade4442647e488e",
+      "compiled_inputs": [
+        {
+          "name": "hidden_states",
+          "shape": [
+            1,
+            2048,
+            64
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "timestep",
+          "shape": [
+            1
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "output_1",
+          "shape": [
+            1,
+            1,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "jgzy0zkxp",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/head/profile.json",
+      "estimated_inference_time_us": 3710,
+      "warm_load_time_us": 201994,
+      "first_load_time_us": 219645,
+      "inference_memory_increase_range": [
+        35729280,
+        42444576
+      ],
+      "inference_memory_peak_range": [
+        0,
+        6715296
+      ],
+      "first_load_memory_increase_range": [
+        1164352,
+        10735008
+      ],
+      "first_load_memory_peak_range": [
+        76419072,
+        85989728
+      ],
+      "warm_load_memory_increase_range": [
+        0,
+        1932208
+      ],
+      "warm_load_memory_peak_range": [
+        69492736,
+        77018800
+      ],
+      "npu_layers": 16,
+      "cpu_layers": 0
+    },
+    "blk07": {
+      "stem": "blk07",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_blk07_fp32.onnx",
+      "source_data_bytes": 251764736,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/blk07/dit_blk07_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "jp2dzo6q5",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/blk07/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/blk07/device/model.bin",
+      "bin_bytes": 247349376,
+      "bin_sha256": "bae5504450bdecd4e89ea3ad9ef2a1dd20526ca992ab49735cfcc6bec363e069",
+      "compiled_inputs": [
+        {
+          "name": "encoder_hidden_states",
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "hidden_in",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_1",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "j5wzrynm5",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/blk07/profile.json",
+      "estimated_inference_time_us": 45621,
+      "warm_load_time_us": 382712,
+      "first_load_time_us": 410722,
+      "inference_memory_increase_range": [
+        27599616,
+        34171920
+      ],
+      "inference_memory_peak_range": [
+        91262976,
+        97835280
+      ],
+      "first_load_memory_increase_range": [
+        1215392,
+        10810512
+      ],
+      "first_load_memory_peak_range": [
+        256049152,
+        265644272
+      ],
+      "warm_load_memory_increase_range": [
+        0,
+        877024
+      ],
+      "warm_load_memory_peak_range": [
+        247681024,
+        255130192
+      ],
+      "npu_layers": 68,
+      "cpu_layers": 0
+    },
+    "blk00": {
+      "stem": "blk00",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_blk00_fp32.onnx",
+      "source_data_bytes": 251764736,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/blk00/dit_blk00_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "j5mklkx9p",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/blk00/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/blk00/device/model.bin",
+      "bin_bytes": 247349376,
+      "bin_sha256": "cb40be3779b086e3bad80146859c4771b4e0f558c7221bc9c653a9d7864c6e52",
+      "compiled_inputs": [
+        {
+          "name": "encoder_hidden_states",
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "hidden_in",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_1",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "jp44248qp",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/blk00/profile.json",
+      "estimated_inference_time_us": 45565,
+      "warm_load_time_us": 374690,
+      "first_load_time_us": 395030,
+      "inference_memory_increase_range": [
+        80807456,
+        93017472
+      ],
+      "inference_memory_peak_range": [
+        92930048,
+        105140064
+      ],
+      "first_load_memory_increase_range": [
+        10286016,
+        20122352
+      ],
+      "first_load_memory_peak_range": [
+        265183232,
+        275019568
+      ],
+      "warm_load_memory_increase_range": [
+        10454576,
+        18202016
+      ],
+      "warm_load_memory_peak_range": [
+        265261056,
+        273008496
+      ],
+      "npu_layers": 68,
+      "cpu_layers": 0
+    },
+    "blk01": {
+      "stem": "blk01",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_blk01_fp32.onnx",
+      "source_data_bytes": 251764736,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/blk01/dit_blk01_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "jpy2y23lg",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/blk01/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/blk01/device/model.bin",
+      "bin_bytes": 247349376,
+      "bin_sha256": "764e3378d54dc16bd0dee3c9bb3103ea0a737b5efe3aeca767a4a1cc984abd59",
+      "compiled_inputs": [
+        {
+          "name": "encoder_hidden_states",
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "hidden_in",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_1",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "jpxrzrmjp",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/blk01/profile.json",
+      "estimated_inference_time_us": 46337,
+      "warm_load_time_us": 372243,
+      "first_load_time_us": 401813,
+      "inference_memory_increase_range": [
+        82050512,
+        94568800
+      ],
+      "inference_memory_peak_range": [
+        94482432,
+        107000720
+      ],
+      "first_load_memory_increase_range": [
+        0,
+        0
+      ],
+      "first_load_memory_peak_range": [
+        255795200,
+        265876096
+      ],
+      "warm_load_memory_increase_range": [
+        17279120,
+        28762208
+      ],
+      "warm_load_memory_peak_range": [
+        275628032,
+        287111120
+      ],
+      "npu_layers": 68,
+      "cpu_layers": 0
+    },
+    "blk02": {
+      "stem": "blk02",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_blk02_fp32.onnx",
+      "source_data_bytes": 251764736,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/blk02/dit_blk02_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "jgl8q8vmp",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/blk02/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/blk02/device/model.bin",
+      "bin_bytes": 247349376,
+      "bin_sha256": "aafd88d208473c80a56cd19c3e8d4e84f0c0acfa92be66983ea83b559fa56a2f",
+      "compiled_inputs": [
+        {
+          "name": "encoder_hidden_states",
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "hidden_in",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_1",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "j5mklk4yp",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/blk02/profile.json",
+      "estimated_inference_time_us": 46406,
+      "warm_load_time_us": 365477,
+      "first_load_time_us": 392165,
+      "inference_memory_increase_range": [
+        79433904,
+        90430464
+      ],
+      "inference_memory_peak_range": [
+        90599424,
+        101595984
+      ],
+      "first_load_memory_increase_range": [
+        1467536,
+        11032768
+      ],
+      "first_load_memory_peak_range": [
+        255836160,
+        265401392
+      ],
+      "warm_load_memory_increase_range": [
+        0,
+        1581376
+      ],
+      "warm_load_memory_peak_range": [
+        248406016,
+        255898320
+      ],
+      "npu_layers": 68,
+      "cpu_layers": 0
+    },
+    "blk03": {
+      "stem": "blk03",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_blk03_fp32.onnx",
+      "source_data_bytes": 251764736,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/blk03/dit_blk03_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "jgjy8yveg",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/blk03/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/blk03/device/model.bin",
+      "bin_bytes": 247349376,
+      "bin_sha256": "2931672598ccb777f8caab5c474d96fc66d45d6dc13387c67d525e5ac24aec28",
+      "compiled_inputs": [
+        {
+          "name": "encoder_hidden_states",
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "hidden_in",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_1",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "jgnqwqovg",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/blk03/profile.json",
+      "estimated_inference_time_us": 45116,
+      "warm_load_time_us": 377740,
+      "first_load_time_us": 390606,
+      "inference_memory_increase_range": [
+        80478080,
+        92459296
+      ],
+      "inference_memory_peak_range": [
+        92372992,
+        104354208
+      ],
+      "first_load_memory_increase_range": [
+        0,
+        0
+      ],
+      "first_load_memory_peak_range": [
+        255766528,
+        265324864
+      ],
+      "warm_load_memory_increase_range": [
+        0,
+        405488
+      ],
+      "warm_load_memory_peak_range": [
+        247066624,
+        258225712
+      ],
+      "npu_layers": 68,
+      "cpu_layers": 0
+    },
+    "blk04": {
+      "stem": "blk04",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_blk04_fp32.onnx",
+      "source_data_bytes": 251764736,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/blk04/dit_blk04_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "jgzy0y3xp",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/blk04/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/blk04/device/model.bin",
+      "bin_bytes": 247349376,
+      "bin_sha256": "078d92d96ac07b450275f45f5deb8a83b1297e69358e087f1fec71ecfecaec82",
+      "compiled_inputs": [
+        {
+          "name": "encoder_hidden_states",
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "hidden_in",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_1",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "jprd7dovg",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/blk04/profile.json",
+      "estimated_inference_time_us": 45412,
+      "warm_load_time_us": 365566,
+      "first_load_time_us": 391813,
+      "inference_memory_increase_range": [
+        81458272,
+        94503264
+      ],
+      "inference_memory_peak_range": [
+        94416896,
+        107461888
+      ],
+      "first_load_memory_increase_range": [
+        0,
+        0
+      ],
+      "first_load_memory_peak_range": [
+        257929216,
+        267242928
+      ],
+      "warm_load_memory_increase_range": [
+        0,
+        499280
+      ],
+      "warm_load_memory_peak_range": [
+        247074816,
+        258534272
+      ],
+      "npu_layers": 68,
+      "cpu_layers": 0
+    },
+    "blk05": {
+      "stem": "blk05",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_blk05_fp32.onnx",
+      "source_data_bytes": 251764736,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/blk05/dit_blk05_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "jpxrzrklp",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/blk05/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/blk05/device/model.bin",
+      "bin_bytes": 247349376,
+      "bin_sha256": "ba3b7eb61f4898ca7a4218f12f974401874f7d3a29f070e0f08d01a6e8699aae",
+      "compiled_inputs": [
+        {
+          "name": "encoder_hidden_states",
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "hidden_in",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_1",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "jp2dzd4x5",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/blk05/profile.json",
+      "estimated_inference_time_us": 46482,
+      "warm_load_time_us": 374785,
+      "first_load_time_us": 392679,
+      "inference_memory_increase_range": [
+        82278752,
+        94016720
+      ],
+      "inference_memory_peak_range": [
+        93929472,
+        105667440
+      ],
+      "first_load_memory_increase_range": [
+        3605456,
+        12679824
+      ],
+      "first_load_memory_peak_range": [
+        257900544,
+        266974912
+      ],
+      "warm_load_memory_increase_range": [
+        0,
+        773920
+      ],
+      "warm_load_memory_peak_range": [
+        247627776,
+        255085632
+      ],
+      "npu_layers": 68,
+      "cpu_layers": 0
+    },
+    "blk06": {
+      "stem": "blk06",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_blk06_fp32.onnx",
+      "source_data_bytes": 251764736,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/blk06/dit_blk06_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "jgk0k0en5",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/blk06/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/blk06/device/model.bin",
+      "bin_bytes": 247349376,
+      "bin_sha256": "7f128bddfa61b6efe75da82d2960b5be5797de127121b6471235ddeaaf5df344",
+      "compiled_inputs": [
+        {
+          "name": "encoder_hidden_states",
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "hidden_in",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_1",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "jpy2y2qrg",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/blk06/profile.json",
+      "estimated_inference_time_us": 46186,
+      "warm_load_time_us": 363298,
+      "first_load_time_us": 397615,
+      "inference_memory_increase_range": [
+        79712640,
+        92425152
+      ],
+      "inference_memory_peak_range": [
+        92381184,
+        105093696
+      ],
+      "first_load_memory_increase_range": [
+        0,
+        0
+      ],
+      "first_load_memory_peak_range": [
+        257789952,
+        267604720
+      ],
+      "warm_load_memory_increase_range": [
+        0,
+        0
+      ],
+      "warm_load_memory_peak_range": [
+        246509568,
+        257799312
+      ],
+      "npu_layers": 68,
+      "cpu_layers": 0
+    },
+    "blk08": {
+      "stem": "blk08",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_blk08_fp32.onnx",
+      "source_data_bytes": 251764736,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/blk08/dit_blk08_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "j5q1d16og",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/blk08/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/blk08/device/model.bin",
+      "bin_bytes": 247349376,
+      "bin_sha256": "78f331ac400e8a0e88f1bfd4b95a32b213efa7f7006265ccf3e1ed672e794e39",
+      "compiled_inputs": [
+        {
+          "name": "encoder_hidden_states",
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "hidden_in",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_1",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "jp09x9d2p",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/blk08/profile.json",
+      "estimated_inference_time_us": 45573,
+      "warm_load_time_us": 370261,
+      "first_load_time_us": 401896,
+      "inference_memory_increase_range": [
+        57981056,
+        69248336
+      ],
+      "inference_memory_peak_range": [
+        92033024,
+        103300304
+      ],
+      "first_load_memory_increase_range": [
+        1401872,
+        11246704
+      ],
+      "first_load_memory_peak_range": [
+        255967232,
+        265812064
+      ],
+      "warm_load_memory_increase_range": [
+        70334960,
+        77851856
+      ],
+      "warm_load_memory_peak_range": [
+        324628480,
+        332145376
+      ],
+      "npu_layers": 68,
+      "cpu_layers": 0
+    },
+    "blk09": {
+      "stem": "blk09",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_blk09_fp32.onnx",
+      "source_data_bytes": 251764736,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/blk09/dit_blk09_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "jgnqwq0jg",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/blk09/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/blk09/device/model.bin",
+      "bin_bytes": 247349376,
+      "bin_sha256": "69be025a1a241166090d2db5f8c269b493a887e8d1dbed18da82d7ef2c0fe5d1",
+      "compiled_inputs": [
+        {
+          "name": "encoder_hidden_states",
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "hidden_in",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_1",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "jp8rkr6zg",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/blk09/profile.json",
+      "estimated_inference_time_us": 47174,
+      "warm_load_time_us": 377300,
+      "first_load_time_us": 394467,
+      "inference_memory_increase_range": [
+        82967760,
+        94647872
+      ],
+      "inference_memory_peak_range": [
+        94560256,
+        106240368
+      ],
+      "first_load_memory_increase_range": [
+        20922432,
+        30108368
+      ],
+      "first_load_memory_peak_range": [
+        275546112,
+        284732048
+      ],
+      "warm_load_memory_increase_range": [
+        7685520,
+        15351824
+      ],
+      "warm_load_memory_peak_range": [
+        261926912,
+        269593216
+      ],
+      "npu_layers": 68,
+      "cpu_layers": 0
+    },
+    "blk10": {
+      "stem": "blk10",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_blk10_fp32.onnx",
+      "source_data_bytes": 251764736,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/blk10/dit_blk10_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "jgjy8yz1g",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/blk10/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/blk10/device/model.bin",
+      "bin_bytes": 247345144,
+      "bin_sha256": "458f4ef3037f313122be64f57cb344b6041cbf6b5a93ad2d40f86f595e74ca6f",
+      "compiled_inputs": [
+        {
+          "name": "encoder_hidden_states",
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "hidden_in",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "jgk0k0oy5",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/blk10/profile.json",
+      "estimated_inference_time_us": 44796,
+      "warm_load_time_us": 376581,
+      "first_load_time_us": 408634,
+      "inference_memory_increase_range": [
+        27032128,
+        39256448
+      ],
+      "inference_memory_peak_range": [
+        39153664,
+        51377984
+      ],
+      "first_load_memory_increase_range": [
+        16094672,
+        26160128
+      ],
+      "first_load_memory_peak_range": [
+        271187968,
+        281253424
+      ],
+      "warm_load_memory_increase_range": [
+        39982096,
+        47927712
+      ],
+      "warm_load_memory_peak_range": [
+        294785024,
+        302730640
+      ],
+      "npu_layers": 67,
+      "cpu_layers": 0
+    },
+    "blk11": {
+      "stem": "blk11",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_blk11_fp32.onnx",
+      "source_data_bytes": 285343744,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/blk11/dit_blk11_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "jp11m1ynp",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/blk11/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/blk11/device/model.bin",
+      "bin_bytes": 281317728,
+      "bin_sha256": "df85b22183f28f92913bb8ad179d78c56a95c3ba47c2febbba84d638e1c3d2e0",
+      "compiled_inputs": [
+        {
+          "name": "encoder_hidden_states",
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "skip_9",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "hidden_in",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "j5q1d1z7g",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/blk11/profile.json",
+      "estimated_inference_time_us": 53758,
+      "warm_load_time_us": 552514,
+      "first_load_time_us": 563166,
+      "inference_memory_increase_range": [
+        26696192,
+        39462064
+      ],
+      "inference_memory_peak_range": [
+        39354368,
+        52120240
+      ],
+      "first_load_memory_increase_range": [
+        0,
+        0
+      ],
+      "first_load_memory_peak_range": [
+        296472576,
+        306433680
+      ],
+      "warm_load_memory_increase_range": [
+        0,
+        1773168
+      ],
+      "warm_load_memory_peak_range": [
+        282284032,
+        294000496
+      ],
+      "npu_layers": 72,
+      "cpu_layers": 0
+    },
+    "blk12": {
+      "stem": "blk12",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_blk12_fp32.onnx",
+      "source_data_bytes": 285343744,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/blk12/dit_blk12_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "jpy2y2r0g",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/blk12/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/blk12/device/model.bin",
+      "bin_bytes": 281321824,
+      "bin_sha256": "9a1d4eae3fd618b74a2fbb4fff73d66cea74e88e562df64a77b10df8288b4d1f",
+      "compiled_inputs": [
+        {
+          "name": "encoder_hidden_states",
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "skip_8",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "hidden_in",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "jgl8q8oep",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/blk12/profile.json",
+      "estimated_inference_time_us": 53265,
+      "warm_load_time_us": 401001,
+      "first_load_time_us": 428097,
+      "inference_memory_increase_range": [
+        27558416,
+        38466288
+      ],
+      "inference_memory_peak_range": [
+        38363136,
+        49271008
+      ],
+      "first_load_memory_increase_range": [
+        1783856,
+        10837072
+      ],
+      "first_load_memory_peak_range": [
+        290000896,
+        299054112
+      ],
+      "warm_load_memory_increase_range": [
+        0,
+        1712672
+      ],
+      "warm_load_memory_peak_range": [
+        282578944,
+        290066592
+      ],
+      "npu_layers": 72,
+      "cpu_layers": 0
+    },
+    "blk13": {
+      "stem": "blk13",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_blk13_fp32.onnx",
+      "source_data_bytes": 285343744,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/blk13/dit_blk13_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "jpxrzr68p",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/blk13/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/blk13/device/model.bin",
+      "bin_bytes": 281330016,
+      "bin_sha256": "56b813da96047595f806f7c242713e6760b7615c575dd313ad6c8cf3596b9d08",
+      "compiled_inputs": [
+        {
+          "name": "encoder_hidden_states",
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "skip_7",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "hidden_in",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "j56m0mrvp",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/blk13/profile.json",
+      "estimated_inference_time_us": 53680,
+      "warm_load_time_us": 385201,
+      "first_load_time_us": 411945,
+      "inference_memory_increase_range": [
+        27028704,
+        39658608
+      ],
+      "inference_memory_peak_range": [
+        39550976,
+        52180880
+      ],
+      "first_load_memory_increase_range": [
+        0,
+        10510416
+      ],
+      "first_load_memory_peak_range": [
+        290082816,
+        300744704
+      ],
+      "warm_load_memory_increase_range": [
+        7813536,
+        16971792
+      ],
+      "warm_load_memory_peak_range": [
+        297562112,
+        306720368
+      ],
+      "npu_layers": 72,
+      "cpu_layers": 0
+    },
+    "blk14": {
+      "stem": "blk14",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_blk14_fp32.onnx",
+      "source_data_bytes": 285343744,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/blk14/dit_blk14_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "jprd7d2kg",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/blk14/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/blk14/device/model.bin",
+      "bin_bytes": 281330016,
+      "bin_sha256": "e69bb035b73aee904b06241aaf25f47417eda9c9f7aec9594fc6fe4a0456175e",
+      "compiled_inputs": [
+        {
+          "name": "encoder_hidden_states",
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "skip_6",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "hidden_in",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "jp37r7xxg",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/blk14/profile.json",
+      "estimated_inference_time_us": 53351,
+      "warm_load_time_us": 399052,
+      "first_load_time_us": 419453,
+      "inference_memory_increase_range": [
+        22557648,
+        35986064
+      ],
+      "inference_memory_peak_range": [
+        35880960,
+        49309376
+      ],
+      "first_load_memory_increase_range": [
+        24850624,
+        35022432
+      ],
+      "first_load_memory_peak_range": [
+        314728448,
+        324900256
+      ],
+      "warm_load_memory_increase_range": [
+        7921120,
+        20304496
+      ],
+      "warm_load_memory_peak_range": [
+        301248512,
+        313631888
+      ],
+      "npu_layers": 72,
+      "cpu_layers": 0
+    },
+    "blk15": {
+      "stem": "blk15",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_blk15_fp32.onnx",
+      "source_data_bytes": 285343744,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/blk15/dit_blk15_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "jpy2y2j0g",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/blk15/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/blk15/device/model.bin",
+      "bin_bytes": 281313632,
+      "bin_sha256": "1df07f1c9b11210037a3b2e0f6e36caed8d74292cbd6573f030a6da84c4b0078",
+      "compiled_inputs": [
+        {
+          "name": "encoder_hidden_states",
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "skip_5",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "hidden_in",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "jgow9wo4p",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/blk15/profile.json",
+      "estimated_inference_time_us": 53782,
+      "warm_load_time_us": 424796,
+      "first_load_time_us": 431348,
+      "inference_memory_increase_range": [
+        13730544,
+        25260688
+      ],
+      "inference_memory_peak_range": [
+        26198016,
+        37728160
+      ],
+      "first_load_memory_increase_range": [
+        0,
+        0
+      ],
+      "first_load_memory_peak_range": [
+        289918976,
+        299769472
+      ],
+      "warm_load_memory_increase_range": [
+        0,
+        0
+      ],
+      "warm_load_memory_peak_range": [
+        284426240,
+        295976416
+      ],
+      "npu_layers": 72,
+      "cpu_layers": 0
+    },
+    "blk16": {
+      "stem": "blk16",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_blk16_fp32.onnx",
+      "source_data_bytes": 285343744,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/blk16/dit_blk16_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "jgk0k03v5",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/blk16/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/blk16/device/model.bin",
+      "bin_bytes": 281301344,
+      "bin_sha256": "ba92dca1f481458f9a06a03dd13f73de057751ffbcd80b2f5d38b86de23ab59e",
+      "compiled_inputs": [
+        {
+          "name": "encoder_hidden_states",
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "skip_4",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "hidden_in",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "jpvmnme7p",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/blk16/profile.json",
+      "estimated_inference_time_us": 53551,
+      "warm_load_time_us": 418156,
+      "first_load_time_us": 422787,
+      "inference_memory_increase_range": [
+        0,
+        0
+      ],
+      "inference_memory_peak_range": [
+        37941248,
+        45612192
+      ],
+      "first_load_memory_increase_range": [
+        11172352,
+        20871616
+      ],
+      "first_load_memory_peak_range": [
+        300789760,
+        310489024
+      ],
+      "warm_load_memory_increase_range": [
+        0,
+        4475360
+      ],
+      "warm_load_memory_peak_range": [
+        285347840,
+        293798752
+      ],
+      "npu_layers": 72,
+      "cpu_layers": 0
+    },
+    "blk17": {
+      "stem": "blk17",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_blk17_fp32.onnx",
+      "source_data_bytes": 285343744,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/blk17/dit_blk17_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "jgow9w31p",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/blk17/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/blk17/device/model.bin",
+      "bin_bytes": 281330016,
+      "bin_sha256": "b4cde1e709822a72ccc64cfc939f5386853fcaa77075d0be81d08d7bc71b2182",
+      "compiled_inputs": [
+        {
+          "name": "encoder_hidden_states",
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "skip_3",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "hidden_in",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "jgjy8yo7g",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/blk17/profile.json",
+      "estimated_inference_time_us": 52733,
+      "warm_load_time_us": 421380,
+      "first_load_time_us": 431111,
+      "inference_memory_increase_range": [
+        27624944,
+        38818288
+      ],
+      "inference_memory_peak_range": [
+        38715392,
+        49908736
+      ],
+      "first_load_memory_increase_range": [
+        18313472,
+        27358048
+      ],
+      "first_load_memory_peak_range": [
+        306630656,
+        315675232
+      ],
+      "warm_load_memory_increase_range": [
+        11589008,
+        18567136
+      ],
+      "warm_load_memory_peak_range": [
+        299520000,
+        306498128
+      ],
+      "npu_layers": 72,
+      "cpu_layers": 0
+    },
+    "blk18": {
+      "stem": "blk18",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_blk18_fp32.onnx",
+      "source_data_bytes": 285343744,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/blk18/dit_blk18_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "jp4424v2p",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/blk18/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/blk18/device/model.bin",
+      "bin_bytes": 281325920,
+      "bin_sha256": "48955b27822d3ef8cb5a3d67eb5feaad1e1ee38f76e5ce4b22fb55ecbcd94ad7",
+      "compiled_inputs": [
+        {
+          "name": "encoder_hidden_states",
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "skip_2",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "hidden_in",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "jpexnx87g",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/blk18/profile.json",
+      "estimated_inference_time_us": 52731,
+      "warm_load_time_us": 401008,
+      "first_load_time_us": 422691,
+      "inference_memory_increase_range": [
+        28674496,
+        39883376
+      ],
+      "inference_memory_peak_range": [
+        39780352,
+        50989232
+      ],
+      "first_load_memory_increase_range": [
+        1649184,
+        10688624
+      ],
+      "first_load_memory_peak_range": [
+        290160640,
+        299200080
+      ],
+      "warm_load_memory_increase_range": [
+        8137808,
+        15917808
+      ],
+      "warm_load_memory_peak_range": [
+        296493056,
+        304273056
+      ],
+      "npu_layers": 72,
+      "cpu_layers": 0
+    },
+    "blk19": {
+      "stem": "blk19",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_blk19_fp32.onnx",
+      "source_data_bytes": 285343744,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/blk19/dit_blk19_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "jprd7dekg",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/blk19/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/blk19/device/model.bin",
+      "bin_bytes": 281325920,
+      "bin_sha256": "b6fc5f9f2e253311ddfa1421139c733d14b7e3cf91f89fbd8a704de59356056b",
+      "compiled_inputs": [
+        {
+          "name": "encoder_hidden_states",
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "skip_1",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "hidden_in",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "jgzy0y8zp",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/blk19/profile.json",
+      "estimated_inference_time_us": 52991,
+      "warm_load_time_us": 401802,
+      "first_load_time_us": 428925,
+      "inference_memory_increase_range": [
+        25964768,
+        37175984
+      ],
+      "inference_memory_peak_range": [
+        37072896,
+        48284112
+      ],
+      "first_load_memory_increase_range": [
+        1089040,
+        10915392
+      ],
+      "first_load_memory_peak_range": [
+        289890304,
+        299716656
+      ],
+      "warm_load_memory_increase_range": [
+        6412784,
+        13712816
+      ],
+      "warm_load_memory_peak_range": [
+        294768640,
+        302068672
+      ],
+      "npu_layers": 72,
+      "cpu_layers": 0
+    },
+    "blk20": {
+      "stem": "blk20",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_blk20_fp32.onnx",
+      "source_data_bytes": 285343744,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/blk20/dit_blk20_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "jgk0k0yv5",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/blk20/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/blk20/device/model.bin",
+      "bin_bytes": 281313632,
+      "bin_sha256": "0af7a74da113a89bbf27ebad2733ef99f47e77c9f4f4f309c6463fbf88eb260d",
+      "compiled_inputs": [
+        {
+          "name": "encoder_hidden_states",
+          "shape": [
+            1,
+            257,
+            1024
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "skip_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "hidden_in",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "j5wzrz8z5",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/blk20/profile.json",
+      "estimated_inference_time_us": 53852,
+      "warm_load_time_us": 403319,
+      "first_load_time_us": 425217,
+      "inference_memory_increase_range": [
+        3660688,
+        13678736
+      ],
+      "inference_memory_peak_range": [
+        39550976,
+        49569024
+      ],
+      "first_load_memory_increase_range": [
+        0,
+        0
+      ],
+      "first_load_memory_peak_range": [
+        289820672,
+        299645200
+      ],
+      "warm_load_memory_increase_range": [
+        0,
+        1743936
+      ],
+      "warm_load_memory_peak_range": [
+        282288128,
+        293741312
+      ],
+      "npu_layers": 72,
+      "cpu_layers": 0
+    },
+    "tail": {
+      "stem": "tail",
+      "source_onnx": "ml/triposg-mobile/logs/spike/b1/dit_tail_fp32.onnx",
+      "source_data_bytes": 540672,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/tail/dit_tail_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "j5q1d12eg",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/tail/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/tail/device/model.bin",
+      "bin_bytes": 402240,
+      "bin_sha256": "771dc86d1d5240d67584274fb59b35da83a134ded1410cdc1b895ef72f1a9aa5",
+      "compiled_inputs": [
+        {
+          "name": "hidden_in",
+          "shape": [
+            1,
+            2049,
+            2048
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2048,
+            64
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "jg92q2kqp",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/tail/profile.json",
+      "estimated_inference_time_us": 4546,
+      "warm_load_time_us": 107290,
+      "first_load_time_us": 139434,
+      "inference_memory_increase_range": [
+        0,
+        1221152
+      ],
+      "inference_memory_peak_range": [
+        1142784,
+        8014576
+      ],
+      "first_load_memory_increase_range": [
+        2201568,
+        11159200
+      ],
+      "first_load_memory_peak_range": [
+        0,
+        8957632
+      ],
+      "warm_load_memory_increase_range": [
+        0,
+        1676048
+      ],
+      "warm_load_memory_peak_range": [
+        1015808,
+        8561280
+      ],
+      "npu_layers": 7,
+      "cpu_layers": 0
+    },
+    "vae_post": {
+      "stem": "vae_post",
+      "source_onnx": "ml/triposg-mobile/logs/spike/vae/vae_post_fp32.onnx",
+      "source_data_bytes": 806227968,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/vae_post/vae_post_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "jp37ryylg",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/vae_post/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/vae_post/device/model.bin",
+      "bin_bytes": 413035016,
+      "bin_sha256": "1fa35b0e3be50a405af3829383bc0c09bbe207129a5d6e5dfc6fca336731f730",
+      "compiled_inputs": [
+        {
+          "name": "latents",
+          "shape": [
+            1,
+            2048,
+            64
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            2048,
+            1024
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "jp11mr02p",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/vae_post/profile.json",
+      "estimated_inference_time_us": 199565,
+      "warm_load_time_us": 529525,
+      "first_load_time_us": 552794,
+      "inference_memory_increase_range": [
+        6689536,
+        18053696
+      ],
+      "inference_memory_peak_range": [
+        18120704,
+        29484864
+      ],
+      "first_load_memory_increase_range": [
+        929200,
+        10954736
+      ],
+      "first_load_memory_peak_range": [
+        421535744,
+        431561280
+      ],
+      "warm_load_memory_increase_range": [
+        0,
+        1606432
+      ],
+      "warm_load_memory_peak_range": [
+        414060544,
+        421775088
+      ],
+      "npu_layers": 533,
+      "cpu_layers": 0
+    },
+    "vae_query": {
+      "stem": "vae_query",
+      "source_onnx": "ml/triposg-mobile/logs/spike/vae/vae_query_fp32.onnx",
+      "source_data_bytes": 50606080,
+      "bundle_dir": "ml/triposg-mobile/logs/spike/aihub/vae_query/vae_query_fp32.onnx",
+      "compile_status": "SUCCESS",
+      "compile_job_id": "jgow9jjxp",
+      "compiled_onnx": "ml/triposg-mobile/logs/spike/aihub/vae_query/device/model.onnx",
+      "model_bin": "ml/triposg-mobile/logs/spike/aihub/vae_query/device/model.bin",
+      "bin_bytes": 27478968,
+      "bin_sha256": "8365c5585e3aa97b82e174807acbff7f612c87f51effdf7685276376340947d7",
+      "compiled_inputs": [
+        {
+          "name": "queries",
+          "shape": [
+            1,
+            8192,
+            3
+          ],
+          "dtype": "FLOAT"
+        },
+        {
+          "name": "kv",
+          "shape": [
+            1,
+            2048,
+            1024
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "compiled_outputs": [
+        {
+          "name": "output_0",
+          "shape": [
+            1,
+            8192,
+            1
+          ],
+          "dtype": "FLOAT"
+        }
+      ],
+      "ep_nodes": 1,
+      "qairt_version": "2.50",
+      "device": "Samsung Galaxy S25 (Family)",
+      "profile_job_id": "jgd4mjweg",
+      "profile_json": "ml/triposg-mobile/logs/spike/aihub/vae_query/profile.json",
+      "estimated_inference_time_us": 33665,
+      "warm_load_time_us": 162426,
+      "first_load_time_us": 179352,
+      "inference_memory_increase_range": [
+        0,
+        506736
+      ],
+      "inference_memory_peak_range": [
+        348160,
+        12496080
+      ],
+      "first_load_memory_increase_range": [
+        2945776,
+        12902336
+      ],
+      "first_load_memory_peak_range": [
+        38576128,
+        48532688
+      ],
+      "warm_load_memory_increase_range": [
+        0,
+        2358416
+      ],
+      "warm_load_memory_peak_range": [
+        29405184,
+        38097520
+      ],
+      "npu_layers": 51,
+      "cpu_layers": 0
+    }
+  }
+}

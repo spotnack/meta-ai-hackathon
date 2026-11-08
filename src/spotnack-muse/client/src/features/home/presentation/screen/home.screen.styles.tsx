@@ -1,6 +1,6 @@
 // Styles for HomeScreen() component.
 
-import { StyleSheet } from "react-native";
+import { ScrollView } from "react-native";
 import styled from "styled-components/native";
 
 import { ThemedText } from "@/shared/theme/themed-text";
@@ -39,7 +39,9 @@ export const ConverterContainer = styled(ThemedView)`
   padding-horizontal: ${Spacing.three}px;
 `;
 
-export const homeStyles = StyleSheet.create({
-  // Keeps the Convert button clear of the tab bar. No flexGrow: useFitToViewport measures the content's own height.
-  scrollContent: { paddingBottom: BottomTabInset + Spacing.three },
-});
+// Keeps the Convert button clear of the tab bar. No flexGrow: useFitToViewport
+// measures the content's own height. (contentContainerStyle has no CSS
+// equivalent, so it is set through attrs.)
+export const HomeScrollView = styled(ScrollView).attrs({
+  contentContainerStyle: { paddingBottom: BottomTabInset + Spacing.three },
+})``;

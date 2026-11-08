@@ -1,4 +1,4 @@
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 import { Image } from "expo-image";
 import styled from "styled-components/native";
 
@@ -9,18 +9,32 @@ import { Size, Spacing } from "@/shared/theme/theme";
 export const PLACEHOLDER_HEIGHT = 140;
 export const PLACEHOLDER_ICON_COLOR = "#ffffff";
 
+// $fill: fill the parent (Stage screen) instead of the card height.
+// $background: container color (defaults to the card's dark gray).
 export const PlaceholderContainer = styled(View)`
   width: 100%;
-  height: ${PLACEHOLDER_HEIGHT}px;
+  height: ${({ $fill }) => ($fill ? "100%" : `${PLACEHOLDER_HEIGHT}px`)};
   align-items: center;
   justify-content: center;
-  background-color: #242225;
+  background-color: ${({ $background }) => $background ?? "#242225"};
 `;
 
 export const PlaceholderPhoto = styled(Image).attrs({
   contentFit: "cover",
   blurRadius: 3,
   transition: 200,
+})`
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+`;
+
+// A still of the model itself (same framing as the live canvas): no blur.
+export const PlaceholderStill = styled(Image).attrs({
+  contentFit: "cover",
+  transition: 150,
 })`
   position: absolute;
   top: 0;
@@ -49,6 +63,12 @@ export const PlaceholderCaption = styled(ThemedText).attrs({ type: "small" })`
   padding-horizontal: ${Spacing.four}px;
 `;
 
-export const placeholderStyles = StyleSheet.create({
-  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0, 0, 0, 0.45)" },
-});
+// Darkens the photo so the icon and caption stay readable.
+export const PlaceholderScrim = styled(View)`
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+`;

@@ -1,0 +1,30 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Foreground conversions (FOREGROUND_SERVICE_* are install-time;
+       POST_NOTIFICATIONS is requested once before the first conversion —
+       without it the service still runs, its notification is just hidden). -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+  <uses-permission android:name="android.permission.WAKE_LOCK" />
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <!-- Debug-only adb trigger (no UI). The receiver no-ops unless the
+       app is debuggable; harmless in release builds. -->
+  <application>
+    <!-- Android 12+: apps may only load vendor public libs they declare.
+         QNN HTP reaches the NPU through FastRPC (libcdsprpc.so); without
+         this the QNN device create fails with QNN_DEVICE_ERROR_INVALID_CONFIG. -->
+    <uses-native-library android:name="libcdsprpc.so" android:required="false" />
+    <!-- dataSync: local file processing (photo in, GLB out); see
+         TripoSGService.kt for why not shortService/specialUse. -->
+    <service
+      android:name=".TripoSGService"
+      android:exported="false"
+      android:foregroundServiceType="dataSync" />
+    <receiver
+      android:name=".TripoSGDebugReceiver"
+      android:exported="true">
+      <intent-filter>
+        <action android:name="expo.modules.triposg.DEBUG_CONVERT" />
+      </intent-filter>
+    </receiver>
+  </application>
+</manifest>

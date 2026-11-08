@@ -1,7 +1,7 @@
 // Styles for FavouritesScreen() component.
 
-import { StyleSheet } from "react-native";
 import styled from "styled-components/native";
+import { ThemedText } from "@/shared/theme/themed-text";
 import { ThemedView } from "@/shared/theme/themed-view";
 import { Spacing } from "@/shared/theme/theme";
 
@@ -30,11 +30,11 @@ export const EmptyStateContainer = styled(ThemedView)`
   padding-horizontal: ${Spacing.four}px;
 `;
 
-export const favouriteCardStyles = StyleSheet.create({
-  fullWidth: {
-    width: "95%",
-    alignSelf: "center",
-    marginLeft: 0,
-    marginBottom: 0,
-  },
-});
+export const EmptyStateText = styled(ThemedText)`
+  text-align: center;
+`;
+
+// Same width as the back arrow, so the title stays centered.
+export const HeaderSpacer = styled(ThemedView)`
+  width: 24px;
+`;

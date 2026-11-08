@@ -1,4 +1,5 @@
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
+import { MenuView } from "@expo/ui/community/menu";
 import styled from "styled-components/native";
 
 import { ThemedText } from "@/shared/theme/themed-text";
@@ -7,13 +8,15 @@ import { Fonts, Spacing, Size } from "@/shared/theme/theme";
 
 export const MENU_ICON_COLOR = "#ffffff";
 
+// $fullWidth: a full-width card (Favourites list) instead of a 200 px tile.
 export const ExploreCard = styled(ThemedView).attrs({
   type: "backgroundElement",
 })`
   height: 200px;
-  width: 200px;
-  margin-left: ${Spacing.two}px;
-  margin-bottom: ${Spacing.three}px;
+  width: ${({ $fullWidth }) => ($fullWidth ? "95%" : "200px")};
+  align-self: ${({ $fullWidth }) => ($fullWidth ? "center" : "auto")};
+  margin-left: ${({ $fullWidth }) => ($fullWidth ? 0 : Spacing.two)}px;
+  margin-bottom: ${({ $fullWidth }) => ($fullWidth ? 0 : Spacing.three)}px;
   border-radius: ${Size.three}px;
   overflow: hidden;
 `;
@@ -65,12 +68,18 @@ export const MenuTrigger = styled(View)`
   background-color: rgba(0, 0, 0, 0.55);
 `;
 
-// Positions the options menu's anchor (MenuView renders its own host view, so this is a plain style).
-export const cardStyles = StyleSheet.create({
-  menuAnchor: {
-    position: "absolute",
-    top: Spacing.two,
-    right: Spacing.two,
-    zIndex: 10,
-  },
-});
+// The options menu sits in the card's upper-right corner.
+export const MenuAnchor = styled(MenuView)`
+  position: absolute;
+  top: ${Spacing.two}px;
+  right: ${Spacing.two}px;
+  z-index: 10;
+`;
+
+// Spinner in the menu's place while an action runs.
+export const BusyMenuTrigger = styled(MenuTrigger)`
+  position: absolute;
+  top: ${Spacing.two}px;
+  right: ${Spacing.two}px;
+  z-index: 10;
+`;
